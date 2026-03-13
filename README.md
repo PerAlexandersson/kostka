@@ -83,8 +83,8 @@ The h*-vector of GT(λ/μ, w) is extracted from the Ehrhart series:
 
     Σ_{n≥0} K(nλ/nμ, nw) t^n  =  h*(t) / (1 − t)^{d+1}
 
-where d = deg. The coefficients h*_0, h*_1, ..., h*_d are non-negative integers. For GT
-polytopes, the h*-vector is conjectured (and in many cases proved) to be unimodal.
+where d = deg. The coefficients h*_0, h*_1, ..., h*_d are non-negative integers. The
+h*-vector is not unimodal in general for GT polytopes.
 
 ### Row-flagged Kostka coefficients
 
@@ -526,8 +526,6 @@ affect K(λ/μ, w) but do affect the row structure for flagged computations.
   of unimodular matrices.
 - Rassart, E. (2004). A polynomiality property for Littlewood-Richardson coefficients.
   *Journal of Combinatorial Theory, Series A*, 107(2), 161–179.
-- Stanley, R. P. (1986). Two combinatorial applications of the Aleksandrov-Fenchel
-  inequalities. *Journal of Combinatorial Theory, Series A*, 40(2), 183–208.
 - Beck, M. and Robins, S. (2015). *Computing the Continuous Discretely*. Springer.
   (Ehrhart theory background.)
 - Alexandersson, P. *Encyclopaedia of Symmetric Functions*.
