@@ -157,8 +157,16 @@ to avoid peak intermediate allocations.
 ### Ehrhart polynomial computation
 
 1. Compute the degree d by constraint propagation on GT(λ/μ, w).
-2. Evaluate K(nλ/nμ, nw) for n = 1, ..., d+1 in parallel (independent DP calls).
-3. Solve the (d+1) × (d+1) Vandermonde system over Q to recover polynomial coefficients.
+2. Collect d+1 sample points using **Ehrhart-Macdonald reciprocity** with an adaptive strategy:
+   - P(0) = 1 is always free (the unique trivial chain).
+   - At each step, greedily choose either a positive evaluation point (P(t) = K(tλ/tμ, tw)
+     via the ordinary DP) or a negative one (P(−t) = (−1)^d · K_strict(tλ/tμ, tw) via the
+     strict/interior DP), picking whichever side last returned the smaller count.
+   - Strict Kostka numbers are 0 for small t (especially when w has many 1s), so
+     negative-side evaluations are often free, significantly reducing the total DP work.
+   - When row flags are active, reciprocity is unavailable and the method falls back to
+     plain positive-dilation interpolation at n = 1, …, d+1.
+3. Solve the resulting (d+1) × (d+1) system over Q by Gaussian elimination to recover polynomial coefficients.
 
 ### h*-vector
 
@@ -522,3 +530,8 @@ affect K(λ/μ, w) but do affect the row structure for flagged computations.
   inequalities. *Journal of Combinatorial Theory, Series A*, 40(2), 183–208.
 - Beck, M. and Robins, S. (2015). *Computing the Continuous Discretely*. Springer.
   (Ehrhart theory background.)
+- Alexandersson, P. *Encyclopaedia of Symmetric Functions*.
+  [Kostka coefficients](https://www.symmetricfunctions.com/kostkaFoulkes.htm#kostkaCoefficients),
+  [GT patterns](https://www.symmetricfunctions.com/gtpatterns.htm),
+  [Flagged Schur functions](https://www.symmetricfunctions.com/schurFlagged.htm#schurFlagged),
+  [Ehrhart polynomials](https://www.symmetricfunctions.com/polytopes.htm#ehrhart).

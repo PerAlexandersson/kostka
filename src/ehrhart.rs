@@ -3,8 +3,9 @@
 /// By Rassart (2004), the function n ↦ K(n*lambda / n*mu, n*w) is a polynomial in n.
 /// We:
 ///   1. Compute the degree d via gt_dim::gt_polytope_dim.
-///   2. Evaluate K(n*lambda, n*mu, n*w) for n = 1..=d+1 in parallel.
-///   3. Solve the Vandermonde system over Q to get coefficients.
+///   2. Collect d+1 sample points using Ehrhart-Macdonald reciprocity with an
+///      adaptive strategy (or plain positive-dilation when flags are active).
+///   3. Solve the resulting system over Q by Gaussian elimination.
 ///
 /// The polynomial is stored as a Vec<BigRational> of length d+1,
 /// where poly[k] is the coefficient of n^k (index 0 = constant term).
