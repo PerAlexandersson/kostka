@@ -68,6 +68,10 @@ pub struct TableArgs {
     /// Output format: text, json, csv
     #[arg(long, default_value = "text")]
     pub format: String,
+
+    /// Halt and report if any Ehrhart polynomial has a negative coefficient
+    #[arg(long)]
+    pub kkt_counterexample: bool,
 }
 
 pub fn run(args: TableArgs) {
@@ -186,6 +190,30 @@ fn run_all_weights(args: TableArgs) {
     // Apply limit.
     if let Some(lim) = args.limit {
         rows.truncate(lim);
+    }
+
+    // Check for negative Ehrhart coefficients.
+    if args.kkt_counterexample {
+        for row in &rows {
+            if let Some(p) = &row.poly {
+                if p.has_negative_coefficient() {
+                    let w_str = row.weight.iter().map(|x| x.to_string())
+                        .collect::<Vec<_>>().join(",");
+                    eprintln!("!!! KKT COUNTEREXAMPLE FOUND !!!");
+                    eprintln!("  lambda = {}", shape_str);
+                    eprintln!("  weight = ({})", w_str);
+                    eprintln!("  K      = {}", row.kostka_val);
+                    eprintln!("  degree = {}", p.degree);
+                    eprintln!("  poly   = {}", p.display());
+                    if let Some(h) = &row.hstar {
+                        let h_str = h.iter().map(|x| x.to_string())
+                            .collect::<Vec<_>>().join(", ");
+                        eprintln!("  h*     = [{}]", h_str);
+                    }
+                    std::process::exit(2);
+                }
+            }
+        }
     }
 
     // Print.

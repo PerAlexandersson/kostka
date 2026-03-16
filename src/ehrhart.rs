@@ -38,6 +38,11 @@ impl EhrhartPoly {
         result
     }
 
+    /// True if any coefficient of the polynomial is negative.
+    pub fn has_negative_coefficient(&self) -> bool {
+        self.coeffs.iter().any(|c| *c < BigRational::zero())
+    }
+
     /// Display as a human-readable string, e.g. "(1/3)n^3 + n^2 + (5/3)n + 1".
     pub fn display(&self) -> String {
         let d = self.degree;

@@ -134,12 +134,11 @@ pub fn skew_kostka(
 
         if let Some(limit) = max_states {
             if new_dp.len() > limit {
-                eprintln!(
-                    "Error: DP state count {} exceeds --max-states {}. \
+                panic!(
+                    "DP state count {} exceeds --max-states {}. \
                      Use a smaller input or raise the limit.",
                     new_dp.len(), limit
                 );
-                std::process::exit(1);
             }
         }
 
@@ -293,11 +292,10 @@ pub fn flagged_skew_kostka(
 
         if let Some(limit) = max_states {
             if new_dp.len() > limit {
-                eprintln!(
-                    "Error: DP state count {} exceeds --max-states {}.",
+                panic!(
+                    "DP state count {} exceeds --max-states {}.",
                     new_dp.len(), limit
                 );
-                std::process::exit(1);
             }
         }
 
@@ -551,12 +549,10 @@ pub fn strict_skew_kostka(
 
         if let Some(limit) = max_states {
             if new_dp.len() > limit {
-                eprintln!(
-                    "Error: DP state count {} exceeds --max-states {}.",
-                    new_dp.len(),
-                    limit
+                panic!(
+                    "DP state count {} exceeds --max-states {}.",
+                    new_dp.len(), limit
                 );
-                std::process::exit(1);
             }
         }
 

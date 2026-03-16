@@ -197,8 +197,11 @@ Binary: `target/release/kostka`.
 | `degree`   | Degree of the Ehrhart polynomial (= dim of GT polytope) |
 | `ehrhart`  | Ehrhart polynomial n ↦ K(nλ/nμ, nw), with degree and values |
 | `hstar`    | h*-vector of GT(λ/μ, w) |
+| `strict-kostka` | K_strict(λ/μ, w) — interior lattice points of GT(λ/μ, w) |
 | `syt`      | Number of SYT of shape λ via hook-length formula |
 | `table`    | Batch computation; see below |
+| `lr`       | c^λ_{μ,ν} — Littlewood-Richardson coefficient |
+| `populate` | Batch-compute Ehrhart data and store in MariaDB |
 
 ### Common flags
 
@@ -319,6 +322,40 @@ h*-vector of GT( 3,2,1 | 2,2,2 ):
   palindromic: no
   unimodal:    yes
 ```
+
+### Littlewood-Richardson coefficients
+
+```
+$ kostka lr --lambda 3,2,1 --mu 2,1 --nu 2,1
+c^(3,2,1)_(2,1,2,1) = 2
+  GT DP (Yamanouchi):     2  (0.0ms)
+  Kostka matrix inverse:  2  (0.0ms)
+```
+
+```
+$ kostka lr --lambda 4,3,2 --mu 2,1 --nu 3,2,1
+c^(4,3,2)_(2,1,3,2,1) = 2
+  GT DP (Yamanouchi):     2  (0.0ms)
+  Kostka matrix inverse:  2  (0.0ms)
+```
+
+JSON output (includes timing for both methods):
+
+```
+$ kostka lr --lambda 4,3,2 --mu 2,1 --nu 3,2,1 --format json
+{"lambda":[4,3,2],"mu":[2,1],"nu":[3,2,1],"lr":"2","dp_ms":0.0,"inv_ms":0.1,"agree":true}
+```
+
+Two independent methods are used and cross-checked:
+
+1. **GT DP (Yamanouchi)**: augments the Kostka DP with Yamanouchi (lattice word)
+   constraints integrated into the horizontal-strip enumeration. The DP state
+   tracks a d-vector of cumulative row differences to enforce the constraint
+   that the reverse reading word is a lattice word.
+
+2. **Kostka matrix inverse**: uses the identity K(λ/μ, α) = Σ_ν c^λ_{μ,ν} K(ν, α)
+   and solves by back-substitution in dominance order, exploiting the upper
+   unitriangularity of the Kostka matrix.
 
 ### Standard Young tableaux
 

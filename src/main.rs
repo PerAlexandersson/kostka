@@ -4,6 +4,8 @@ mod gt_dim;
 mod ehrhart;
 mod syt;
 mod table;
+mod populate;
+mod lr;
 
 use clap::{Parser, Subcommand};
 use partition::{parse_partition, parse_weight, Partition};
@@ -394,6 +396,50 @@ EXAMPLES:
   CSV output of all Ehrhart data for a shape:
     kostka table --lambda 3,2,1 --all-weights --ehrhart --format csv")]
     Table(table::TableArgs),
+
+    /// Batch-compute Ehrhart data and store in MariaDB (crash-resumable)
+    Populate(populate::PopulateArgs),
+
+    /// Littlewood-Richardson coefficient c^λ_{μ,ν}
+    ///
+    /// Counts skew SSYT of shape λ/μ with content ν whose reverse reading word
+    /// is a lattice word (Yamanouchi word).  Computed by two independent methods
+    /// and cross-checked:
+    ///
+    /// 1. **GT DP**: augmented Gelfand-Tsetlin DP with Yamanouchi constraints
+    ///    integrated directly into the horizontal-strip enumeration.
+    ///
+    /// 2. **Kostka inverse**: uses the identity K(λ/μ, α) = Σ_ν c_ν K(ν, α)
+    ///    solved by back-substitution (the Kostka matrix is upper unitriangular
+    ///    in dominance order).
+    #[command(after_help = "\
+EXAMPLES:
+  c^(4,2,1)_{(2,1),(3,1,1)}:
+    kostka lr --lambda 4,2,1 --mu 2,1 --nu 3,1,1
+
+  JSON output:
+    kostka lr --lambda 4,2,1 --mu 2,1 --nu 3,1,1 --format json")]
+    Lr {
+        /// Outer shape λ
+        #[arg(long)]
+        lambda: String,
+
+        /// Inner shape μ (empty for straight shape, but c^λ_{∅,ν} = δ_{λ,ν})
+        #[arg(long, default_value = "")]
+        mu: String,
+
+        /// Content partition ν (the Schur function index in s_{λ/μ} = Σ c·s_ν)
+        #[arg(long)]
+        nu: String,
+
+        /// Output format: text (default), json
+        #[arg(long, default_value = "text")]
+        format: String,
+
+        /// Abort DP if any level exceeds N states
+        #[arg(long)]
+        max_states: Option<usize>,
+    },
 }
 
 fn main() {
@@ -518,6 +564,15 @@ fn main() {
         }
         Command::Table(args) => {
             table::run(args);
+        }
+        Command::Populate(args) => {
+            populate::run(args);
+        }
+        Command::Lr { lambda, mu, nu, format, max_states } => {
+            let lam = parse_part(&lambda);
+            let inner = parse_inner(&mu);
+            let nu_part = parse_part(&nu);
+            lr::run(&lam, &inner, &nu_part, &format, max_states);
         }
     }
 }
