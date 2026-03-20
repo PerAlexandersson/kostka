@@ -1,3 +1,5 @@
+//! Partition type with parsing, combinatorial utilities, and dominance order.
+
 /// A partition stored as a Vec<u32> of parts in weakly decreasing order, no trailing zeros.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Partition(pub Vec<u32>);

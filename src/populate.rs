@@ -183,8 +183,7 @@ fn already_computed(conn: &mut PooledConn, lambda_str: &str, mu_str: &str) -> Ha
     rows.into_iter().map(|(w, uf)| format!("{}|{}", w, uf)).collect()
 }
 
-// ── main entry point ─────────────────────────────────────────────────────────
-
+/// Batch-compute Ehrhart data and insert into MariaDB (crash-resumable).
 pub fn run(args: PopulateArgs) {
     // Connect to DB (skip in dry-run mode).
     let pool = if !args.dry_run {

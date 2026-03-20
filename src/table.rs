@@ -74,6 +74,7 @@ pub struct TableArgs {
     pub kkt_counterexample: bool,
 }
 
+/// Dispatch table-mode computation based on CLI arguments.
 pub fn run(args: TableArgs) {
     if let Some(n) = args.n {
         run_full_matrix(n, &args);

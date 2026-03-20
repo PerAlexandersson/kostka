@@ -1,3 +1,6 @@
+//! CLI for computing Kostka coefficients, Ehrhart polynomials, and h*-vectors
+//! of Gelfand-Tsetlin polytopes.  See `kostka --help` for usage.
+
 mod partition;
 mod kostka_dp;
 mod gt_dim;

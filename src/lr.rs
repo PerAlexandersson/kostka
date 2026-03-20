@@ -243,8 +243,7 @@ pub fn lr_kostka_inverse(
     idx_of.get(&nu_key).map(|&i| c[i].clone()).unwrap_or_else(BigInt::zero)
 }
 
-// ── CLI entry point ─────────────────────────────────────────────────────────
-
+/// Compute and display c^λ_{μ,ν} via both methods, cross-checking the results.
 pub fn run(lambda: &Partition, mu: &Partition, nu: &Partition, format: &str, max_states: Option<usize>) {
     let t0 = Instant::now();
     let c_dp = lr_dp(lambda, mu, nu, max_states);
