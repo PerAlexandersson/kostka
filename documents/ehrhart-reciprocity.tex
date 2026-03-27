@@ -439,6 +439,116 @@ genuinely different in this respect?
 
 
 % =====================================================================
+\section{Order polytopes}\label{sec:orderPolytopes}
+% =====================================================================
+
+The reciprocity approach extends naturally to \defin{order polytopes}.
+For a finite poset~$P$ on $\{0,1,\dotsc,n-1\}$, the
+\defin{order polytope}~\cite{Stanley1986}
+\[
+  \mathcal{O}(P) = \bigl\{x \in [0,1]^n : x_a \leq x_b \text{ for all } a <_P b \bigr\}
+\]
+has the property that its lattice points at dilation~$t$ are weakly
+order-preserving maps $P \to \{0,1,\dotsc,t\}$, so
+$\Ehr_{\mathcal{O}(P)}(t) = \Omega(P, t+1)$, where $\Omega(P,k)$
+is Stanley's order polynomial.  Interior lattice points at dilation~$t$
+correspond to strictly order-preserving maps $P \to \{1,\dotsc,t-1\}$,
+giving Ehrhart--Macdonald reciprocity in the form
+\begin{equation}\label{eq:order-reciprocity}
+  \Ehr_{\mathcal{O}(P)}(-k)
+  = (-1)^n \, \bar{\Omega}(P, k-1),
+\end{equation}
+where $\bar{\Omega}(P,m)$ counts strict order-preserving maps
+$P \to \{1,\dotsc,m\}$.
+
+\subsection{Frontier DP for order-preserving maps}\label{subs:frontierDP}
+
+The standard approach to evaluating $\Omega(P,k)$ enumerates all
+order-preserving maps by backtracking over vertices, giving
+$O(k^n)$ worst-case time.  We introduce a \defin{frontier DP} that
+processes vertices in a natural labeling order, maintaining as state
+only the values of \emph{live} vertices---those with at least one
+unprocessed child.  When a vertex~$v$ has no children among the
+remaining vertices, its value does not affect future constraints,
+so all valid choices are collapsed into a single multiplier
+$(k - \ell_v + 1)$, where $\ell_v$ is the lower bound from parent
+constraints.  States that agree on all live vertex values are merged.
+
+The complexity is $O(n \cdot k^{w})$, where $w$ is the maximum
+frontier width (the largest number of simultaneously live vertices).
+For chains and zigzag (fence) posets, $w = 1$; for antichains,
+$w = 0$ (each vertex is independent); for Young diagram posets of
+shape $(\lambda_1, \dotsc, \lambda_r)$, $w \leq \max_i \lambda_i$.
+
+\subsection{Order polytope benchmarks}\label{subs:orderBenchmarks}
+
+We benchmark our frontier DP implementation (in the
+\texttt{combinatoric-core} Rust crate) against polymake/Normaliz
+for $h^*$-vector computation.  All $h^*$-vectors agree.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{%
+  Comparison of order polytope $h^*$-vector computation times.
+  ``Rust DP'' is our frontier DP with reciprocity and BigRational
+  interpolation.  ``polymake'' uses the polymake/Normaliz backend.
+  Both run on the same machine (desktop, single thread).
+}
+\label{tab:orderPolyBench}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+\toprule
+Poset & $n$ & Rust DP & polymake & speedup \\
+\midrule
+Chain(4)           &  4 & 0.2\,ms & 0.06\,s &    $4 \times 10^2$ \\
+Chain(8)           &  8 & 0.9\,ms & 0.07\,s &    $80\times$       \\
+Antichain(3)       &  3 & 0.08\,ms & 0.08\,s &   $10^3$           \\
+Antichain(5)       &  5 & 0.2\,ms & 0.07\,s &    $4 \times 10^2$ \\
+Shape $(3,2,1)$    &  6 & 0.4\,ms & 0.06\,s &    $2 \times 10^2$ \\
+Shape $(4,3,2,1)$  & 10 & 1.9\,ms & 0.08\,s &    $40\times$       \\
+Shape $(3,3,3)$    &  9 & 1.3\,ms & 0.08\,s &    $60\times$       \\
+Fence(6)           &  6 & 0.7\,ms & 0.08\,s &    $10^2$           \\
+Fence(8)           &  8 & 1.8\,ms & 0.20\,s &    $10^2$           \\
+Fence(10)          & 10 & 2.1\,ms & 0.53\,s &    $3 \times 10^2$ \\
+2-alternating(8)   &  8 & 0.9\,ms & 0.08\,s &    $90\times$       \\
+3-alternating(9)   &  9 & 1.3\,ms & 0.08\,s &    $60\times$       \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\begin{remark}\label{rem:orderPolySpeedup}
+The speedup ranges from $40\times$ to $1000\times$ depending on
+the poset structure.  Note that the polymake timings include a
+roughly $50$\,ms startup overhead; for larger posets the gap widens
+as Normaliz's triangulation-based approach scales with the number of
+vertices, while the frontier DP scales with the frontier width.
+For \emph{narrow} posets (chains, fences, zigzag structures),
+where the frontier width $w$ is constant, the DP runs in polynomial time
+$O(nk^{w})$, whereas the polytope has exponentially many vertices.
+\end{remark}
+
+By Stanley's theorem~\cite[Thm.~4.5.14]{StanleyEC1},
+for a naturally labeled poset~$P$, the $h^*$-vector of
+$\mathcal{O}(P)$ equals the $P$-Eulerian polynomial:
+\[
+  h^*_i = \#\{\sigma \in \mathcal{L}(P) : \mathrm{des}(\sigma) = i\},
+\]
+where $\mathcal{L}(P)$ is the set of linear extensions and
+$\mathrm{des}(\sigma)$ counts descents.  Our computation verifies this
+identity for all posets in Table~\ref{tab:orderPolyBench}.
+
+\begin{example}\label{ex:fenceHstar}
+For the fence (zigzag) poset on 10 elements:
+\[
+  \hvec = (1, 133, 2475, 12331, 20641, 12331, 2475, 133, 1).
+\]
+This is palindromic, as expected for a Gorenstein polytope, and
+was previously intractable with \texttt{i64} rational interpolation
+due to overflow in the Lagrange interpolation step (now resolved by
+using exact \texttt{BigRational} arithmetic).
+\end{example}
+
+% =====================================================================
 \section{Further directions}\label{sec:furtherDirections}
 % =====================================================================
 
@@ -449,8 +559,8 @@ where $\Ehrstar_P(n) = 0$ for small~$n$.
 GT polytopes are closely related to \defin{flow polytopes} on directed acyclic
 graphs~\cite{LiuMeszarosDizier2019flow}.
 
-Order polytopes is a natural family where we believe our 
-method will be effective, as well as matroid polytopes.
+Matroid polytopes are another natural family
+where we believe the reciprocity approach will be effective.
 
 
 \bibliographystyle{amsalpha}
