@@ -486,48 +486,67 @@ shape $(\lambda_1, \dotsc, \lambda_r)$, $w \leq \lambda_1$.
 
 \subsection{Order polytope benchmarks}\label{subs:orderBenchmarks}
 
-We benchmark our frontier DP implementation against polymake/Normaliz
-for $h^*$-vector computation.
+We benchmark three methods for computing the $h^*$-vector of order polytopes:
+\begin{enumerate}
+\item \textbf{Rust DP}: our frontier DP with Ehrhart--Macdonald reciprocity
+  and \texttt{BigRational} interpolation;
+\item \textbf{linext}: Stanley's formula---enumerate all linear extensions
+  $\mathcal{L}(P)$ and tabulate descents (streaming, $O(n)$ memory);
+\item \textbf{polymake}: the polymake/Normaliz backend for general
+  lattice-point enumeration.
+\end{enumerate}
 
 \begin{table}[!ht]
 \centering
 \small
 \caption{%
   Comparison of order polytope $h^*$-vector computation times.
-  ``Rust DP'' is our frontier DP with reciprocity and BigRational
-  interpolation.  ``polymake'' uses the polymake/Normaliz backend.
-  Both run on the same machine (desktop, single thread).
+  All three methods run on the same machine (desktop, single thread).
+  ``---'' indicates the method was not run
+  (the linear extension method is infeasible
+  for large fence posets due to the exponential number of extensions).
 }
 \label{tab:orderPolyBench}
-\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
 \toprule
-Poset & $n$ & Rust DP & polymake & speedup \\
+Poset & $n$ & Rust DP & linext & polymake \\
 \midrule
-Chain(4)           &  4 & 0.2\,ms & 0.06\,s &    $4 \times 10^2$ \\
-Chain(8)           &  8 & 0.9\,ms & 0.07\,s &    $80\times$       \\
-Antichain(3)       &  3 & 0.08\,ms & 0.08\,s &   $10^3$           \\
-Antichain(5)       &  5 & 0.2\,ms & 0.07\,s &    $4 \times 10^2$ \\
-Shape $(3,2,1)$    &  6 & 0.4\,ms & 0.06\,s &    $2 \times 10^2$ \\
-Shape $(4,3,2,1)$  & 10 & 1.9\,ms & 0.08\,s &    $40\times$       \\
-Shape $(3,3,3)$    &  9 & 1.3\,ms & 0.08\,s &    $60\times$       \\
-Fence(6)           &  6 & 0.7\,ms & 0.08\,s &    $10^2$           \\
-Fence(8)           &  8 & 1.8\,ms & 0.20\,s &    $10^2$           \\
-Fence(10)          & 10 & 2.1\,ms & 0.53\,s &    $3 \times 10^2$ \\
-2-alternating(8)   &  8 & 0.9\,ms & 0.08\,s &    $90\times$       \\
-3-alternating(9)   &  9 & 1.3\,ms & 0.08\,s &    $60\times$       \\
+Shape $(3,2,1)$    &  6 & 0.4\,ms & 2\,\textmu s  & 60\,ms  \\
+Fence(8)           &  8 & 0.9\,ms & 50\,\textmu s & 90\,ms  \\
+Shape $(4,3,2,1)$  & 10 & 2\,ms   & 30\,\textmu s & 90\,ms  \\
+Shape $(3,3,3)$    &  9 & 1.3\,ms & 5\,\textmu s  & 60\,ms  \\
+Fence(10)          & 10 & 1.8\,ms & 1.7\,ms       & 520\,ms \\
+2-alt(10)          & 10 & 1.8\,ms & 1.7\,ms       & 490\,ms \\
+\midrule
+Shape $(5,4,3,2,1)$ & 15 & 9\,ms  & 11\,ms        & 2.5\,s  \\
+Shape $(4,4,4,4)$  & 16 & 20\,ms  & 2\,ms         & 270\,ms \\
+Shape $(5,5,5)$    & 15 & 20\,ms  & 0.4\,ms       & 120\,ms \\
+Fence(14)          & 14 & 6\,ms   & ---            & $>\!5$\,s \\
+\midrule
+Shape $(5,5,5,5)$  & 20 & 175\,ms & ---            & $>\!5$\,s \\
+Shape $(6,5,4,3,2,1)$ & 21 & 100\,ms & ---        & ---     \\
+Fence(20)          & 20 & 23\,ms  & ---            & ---     \\
+Shape $(6,6,6)$    & 18 & 230\,ms & ---            & ---     \\
+Shape $(6,6,6,6)$  & 24 & 6.7\,s  & ---            & ---     \\
 \bottomrule
 \end{tabular*}
 \end{table}
 
 \begin{remark}\label{rem:orderPolySpeedup}
-The speedup ranges from $40\times$ to $1000\times$ depending on
-the poset structure.  Note that the polymake timings include a
-roughly $50$\,ms startup overhead; for larger posets the gap widens
-as Normaliz's triangulation-based approach scales with the number of
-vertices, while the frontier DP scales with the frontier width.
-For \emph{narrow} posets (chains, fences, zigzag structures),
-where the frontier width $w$ is constant, the DP runs in polynomial time
-$O(nk^{w})$, whereas the polytope has exponentially many vertices.
+Table~\ref{tab:orderPolyBench} reveals that the three methods have
+complementary strengths.  For \emph{few linear extensions}
+(shapes with small hook lengths), Stanley's formula is fastest: the
+staircase $(4,3,2,1)$ has only 768 linear extensions, so direct
+enumeration takes 30\,\textmu s.
+For \emph{narrow} posets (chains, fences), the frontier DP dominates
+because $w=1$ gives polynomial time $O(nk)$, while the number of
+linear extensions grows exponentially---fence(14) already exhausts
+the 5\,s cap for polymake, but the DP finishes in 6\,ms.
+Polymake/Normaliz is a general-purpose tool that does not exploit
+the order polytope structure; its triangulation-based approach
+scales with the number of vertices of the polytope, not the
+poset width.  For the largest cases ($n \geq 20$), only the
+frontier DP is feasible.
 \end{remark}
 
 By Stanley's theorem~\cite[Thm.~4.5.14]{StanleyEC1},
@@ -537,21 +556,14 @@ $\mathcal{O}(P)$ equals the $P$-Eulerian polynomial:
   h^*_i = \#\{\sigma \in \mathcal{L}(P) : \mathrm{des}(\sigma) = i\},
 \]
 where $\mathcal{L}(P)$ is the set of linear extensions and
-$\mathrm{des}(\sigma)$ counts descents.  Our computation verifies this
-identity for all posets in Table~\ref{tab:orderPolyBench}.
-
-\begin{remark}\label{rem:linextVsReciprocity}
-One might consider computing the $h^*$-vector directly from Stanley's
-formula by enumerating all linear extensions and tabulating descents.
-However, counting linear extensions is $\#\mathsf{P}$-complete in
+$\mathrm{des}(\sigma)$ counts descents.
+Counting linear extensions is $\#\mathsf{P}$-complete in
 general~\cite{BrightwellWinkler1991}, and even for structured posets the
 number $|\mathcal{L}(P)|$ can be enormous---e.g., $|\mathcal{L}(P)| = n!$
 for the antichain on $n$~elements.  Our Ehrhart/reciprocity approach
 avoids linear extension enumeration entirely: it requires only $\sim n/2$
 evaluations of the order polynomial via the frontier DP, each costing
-$O(n \cdot k^w)$.  For narrow posets this is polynomial in~$n$, whereas
-the linear extension approach is necessarily exponential in $|\mathcal{L}(P)|$.
-\end{remark}
+$O(n \cdot k^w)$.
 
 \begin{example}\label{ex:fenceHstar}
 For the fence (zigzag) poset on 10 elements:
