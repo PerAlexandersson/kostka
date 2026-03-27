@@ -272,10 +272,14 @@ Git repository for full documentation.
 % =====================================================================
 
 We compare our method against two alternatives:
-the Oscar/polymake pipeline~\cite{GawrilowJoswig2000,OskarThesis},
-which uses Normaliz for general lattice-point enumeration, and
-A.~Buch's \texttt{lrcalc}~\cite{Buch2000}, which reduces Kostka
+the Oscar/polymake pipeline~\cite{GawrilowJoswig2000,OskarThesis}
+and A.~Buch's \texttt{lrcalc}~\cite{Buch2000}, which reduces Kostka
 evaluations to LR coefficient computations.
+(Oscar is a Julia framework that calls polymake for polyhedral
+computations, which in turn delegates lattice-point enumeration
+and $h^*$-vector computation to Normaliz~\cite{BradenMacPhersonProceesi2006};
+thus ``Oscar,'' ``polymake,'' and ``Normaliz'' refer to different
+layers of the same computational stack.)
 Tables~\ref{tab:benchmarks} and~\ref{tab:lrcalc} summarize the results.
 
 The Oscar/polymake approach requires constructing the full vertex
@@ -375,7 +379,7 @@ from the horizontal-strip structure.  The reciprocity advantage
 
 
 % =====================================================================
-\section{The $h^{*}$-vector}\label{sec:hstar}
+\section{The \texorpdfstring{h-star}{$h^{*}$}-vector}\label{sec:hstar}
 % =====================================================================
 
 For a \emph{rational} polytope $P$ with denominator $q$
@@ -478,13 +482,12 @@ The complexity is $O(n \cdot k^{w})$, where $w$ is the maximum
 frontier width (the largest number of simultaneously live vertices).
 For chains and zigzag (fence) posets, $w = 1$; for antichains,
 $w = 0$ (each vertex is independent); for Young diagram posets of
-shape $(\lambda_1, \dotsc, \lambda_r)$, $w \leq \max_i \lambda_i$.
+shape $(\lambda_1, \dotsc, \lambda_r)$, $w \leq \lambda_1$.
 
 \subsection{Order polytope benchmarks}\label{subs:orderBenchmarks}
 
-We benchmark our frontier DP implementation (in the
-\texttt{combinatoric-core} Rust crate) against polymake/Normaliz
-for $h^*$-vector computation.  All $h^*$-vectors agree.
+We benchmark our frontier DP implementation against polymake/Normaliz
+for $h^*$-vector computation.
 
 \begin{table}[!ht]
 \centering
@@ -537,15 +540,25 @@ where $\mathcal{L}(P)$ is the set of linear extensions and
 $\mathrm{des}(\sigma)$ counts descents.  Our computation verifies this
 identity for all posets in Table~\ref{tab:orderPolyBench}.
 
+\begin{remark}\label{rem:linextVsReciprocity}
+One might consider computing the $h^*$-vector directly from Stanley's
+formula by enumerating all linear extensions and tabulating descents.
+However, counting linear extensions is $\#\mathsf{P}$-complete in
+general~\cite{BrightwellWinkler1991}, and even for structured posets the
+number $|\mathcal{L}(P)|$ can be enormous---e.g., $|\mathcal{L}(P)| = n!$
+for the antichain on $n$~elements.  Our Ehrhart/reciprocity approach
+avoids linear extension enumeration entirely: it requires only $\sim n/2$
+evaluations of the order polynomial via the frontier DP, each costing
+$O(n \cdot k^w)$.  For narrow posets this is polynomial in~$n$, whereas
+the linear extension approach is necessarily exponential in $|\mathcal{L}(P)|$.
+\end{remark}
+
 \begin{example}\label{ex:fenceHstar}
 For the fence (zigzag) poset on 10 elements:
 \[
   \hvec = (1, 133, 2475, 12331, 20641, 12331, 2475, 133, 1).
 \]
-This is palindromic, as expected for a Gorenstein polytope, and
-was previously intractable with \texttt{i64} rational interpolation
-due to overflow in the Lagrange interpolation step (now resolved by
-using exact \texttt{BigRational} arithmetic).
+This is palindromic, as expected for a Gorenstein polytope.
 \end{example}
 
 % =====================================================================
