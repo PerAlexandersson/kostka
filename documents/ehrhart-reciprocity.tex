@@ -379,7 +379,7 @@ from the horizontal-strip structure.  The reciprocity advantage
 
 
 % =====================================================================
-\section{The \texorpdfstring{$h^{*}$}{h-star}-vector}\label{sec:hstar}
+\section{The \texorpdfstring{$h^{*}$}{h*}-vector}\label{sec:hstar}
 % =====================================================================
 
 For a \emph{rational} polytope $P$ with denominator $q$
@@ -574,7 +574,7 @@ This is palindromic, as expected for a Gorenstein polytope.
 \end{example}
 
 
-\subsection{Non-real-rooted $h^*$-vectors from permutation posets}\label{subs:nonRR}
+\subsection{Non-real-rooted \texorpdfstring{$h^*$}{h*}-vectors from permutation posets}\label{subs:nonRR}
 
 As an application of the fast $h^*$-computation, we investigate
 real-rootedness of $h^*$-polynomials for \defin{permutation posets}.
@@ -589,29 +589,19 @@ Starting from a $321$-avoiding permutation of Stembridge,
 \]
 whose permutation poset has
 $h^*(t) = 1 + 32t + 336t^2 + 1420t^3 + 2534t^4 + 1946t^5 + 658t^6 + 86t^7 + 3t^8$
-(log-concave but \emph{not} real-rooted),
+(ultra-log-concave but \emph{not} real-rooted),
 we searched over 34{,}226 nearby $4321$-avoiding permutations
 (within 3~arbitrary transpositions) and found exactly 22 with
 non-real-rooted~$h^*$.
-Deletion and standardization (removing a value and relabeling)
-was used to search downward; no non-real-rooted examples exist
-at $n = 16$ among $21{,}253$ candidates tested.
-Thus $n = 17$ appears to be a sharp threshold for this family.
-
-Iterating insertions of $n+1$ at various positions produces
-non-real-rooted examples at each $n \geq 17$, with the imaginary
-part of the unique conjugate pair of non-real roots growing
-approximately linearly with~$n$.
-All non-real-rooted examples have exactly two non-real roots.
 
 \begin{example}\label{ex:321containing}
 Almost all non-real-rooted examples are $321$-avoiding.
 A notable exception, found at transposition distance~3 from~$w_0$, is
 \[
-  w = (3,4,6,8,10,12,2,1,15,5,17,7,9,11,13,14,16) \in S_{17},
+  w = (3,4,6,8,10,\underline{12,2,1},15,5,17,7,9,11,13,14,16) \in S_{17},
 \]
-which \emph{contains} the pattern~$321$ (at positions $6,7,8$:
-the subsequence $12, 2, 1$).  Its $h^*$-polynomial is
+which \emph{contains} the pattern~$321$. 
+ Its $h^*$-polynomial is
 \[
   h^*(t) = 1 + 41t + 525t^2 + 2596t^3 + 5349t^4 + 4731t^5 + 1849t^6 + 284t^7 + 12t^8,
 \]
@@ -619,12 +609,8 @@ with non-real roots at approximately $-2.15 \pm 0.041\,i$.
 This is the only $321$-containing example among the 22 failures
 at $n = 17$, and has the \emph{smallest} imaginary part of all
 examples found---it is the closest to being real-rooted.
+The coefficients form an ultra-log-concave sequence.
 \end{example}
-
-\begin{question}\label{q:minimalNonRR}
-Is $n = 17$ the smallest value of~$n$ for which a permutation poset
-$P_w$ has a non-real-rooted $h^*$-polynomial?
-\end{question}
 
 
 % =====================================================================
