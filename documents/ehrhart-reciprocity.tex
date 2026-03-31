@@ -669,41 +669,59 @@ $12$ & $1 + 364t + 15393t^{2} + 169416t^{3} + 656683t^{4} + 1019051t^{5}$ \\
 
 \subsection*{A recurrence for Ehrhart evaluations}
 
-Let $L_n(t) = \Ehr_{\mathcal{O}(F_n)}(t)$ denote the Ehrhart polynomial
+Let $L_n(s) = \Ehr_{\mathcal{O}(F_n)}(s)$ denote the Ehrhart polynomial
 of the order polytope of the fence poset on $n$ elements, evaluated
-at a non-negative integer~$t$.  Computations up to $n = 25$ reveal the
+at a non-negative integer~$s$.  Computations up to $n = 25$ reveal the
 following recurrence.
 
 \begin{observation}\label{obs:fenceRecurrence}
-For each fixed $t \geq 2$, the odd-indexed subsequence
-$L_1(t), L_3(t), L_5(t), \dotsc$ and the even-indexed subsequence
-$L_2(t), L_4(t), L_6(t), \dotsc$ each satisfy a linear recurrence
-with constant coefficients given by the nonzero entries of row~$2t$
-of the OEIS triangle A109466, where
-$T(n,k) = (-1)^{n-k} \binom{k}{n-k}$.
+For each fixed $s \geq 2$, the subsequences
+$(L_{2m+1}(s))_{m \geq 0}$ and $(L_{2m}(s))_{m \geq 1}$
+each satisfy a linear recurrence with constant coefficients
+given by the nonzero entries of row~$2s$ of the OEIS
+triangle~A109466, $T(n,k) = (-1)^{n-k} \binom{k}{n-k}$.
 
 For example:
 \begin{itemize}
-\item $t=2$: row~4 gives $(1, -3, 1)$, so
-  $L_{n+4}(2) = 3\, L_{n+2}(2) - L_n(2)$ for $n$ of fixed parity.
-  The odd subsequence $(2, 5, 13, 34, 89, \dotsc)$ and even
-  subsequence $(3, 8, 21, 55, 144, \dotsc)$ are both bisections of
+\item $s=2$: row~4 gives $(1, -3, 1)$, so
+  $L_{n+4}(2) = 3 L_{n+2}(2) - L_n(2)$
+  for~$n$ of fixed parity.
+  The subsequences $(2, 5, 13, 34, 89, \dotsc)$ and
+  $(3, 8, 21, 55, 144, \dotsc)$ are bisections of
   the Fibonacci sequence.
-\item $t=3$: row~6 gives $(-1, 6, -5, 1)$, so
-  $L_{n+6}(3) = 5\, L_{n+4}(3) - 6\, L_{n+2}(3) + L_n(3)$.
-\item $t=4$: row~8 gives $(1, -10, 15, -7, 1)$, yielding an
+\item $s=3$: row~6 gives $(-1, 6, -5, 1)$, so
+  $L_{n+6}(3) = 5 L_{n+4}(3) - 6 L_{n+2}(3) + L_n(3)$.
+\item $s=4$: row~8 gives $(1, -10, 15, -7, 1)$, yielding an
   order-4 recurrence (in steps of~2).
 \end{itemize}
-In general, the recurrence for fixed~$t$ has order~$t$
-and its characteristic polynomial is
-\[
-  \sum_{j=0}^{t} (-1)^{t-j}\binom{n+j}{2t-n-j}\, x^j
-  \Big|_{n=t},
-\]
-matching row~$2t$ of the triangle.
-The interleaved sequence $(L_n(t))_{n \geq 1}$
+In general, the recurrence for fixed~$s$ has order~$s$
+and its characteristic polynomial $p_s(x)$ is read from row~$2s$
+of the triangle.
+The interleaved sequence $(L_n(s))_{n \geq 1}$
 does not satisfy a recurrence from this triangle.
+
+The generating function for the characteristic polynomials is
+\begin{equation}\label{eq:fenceCharGF}
+  \sum_{s \geq 0} p_s(x)\, y^s
+  = \frac{1+y}{1 + (2-x)y + y^2},
+\end{equation}
+or equivalently, the $p_s$ satisfy the three-term recurrence
+\[
+  p_s(x) = (x-2)\, p_{s-1}(x) - p_{s-2}(x),
+  \qquad p_0 = 1,\; p_1 = x - 1.
+\]
 \end{observation}
+
+\begin{remark}\label{rem:fenceFlaggedSchur}
+The order polytope of the fence poset on~$n$ elements
+can be realized as a face of a Gelfand--Tsetlin polytope:
+the zigzag path in the fence embeds as a path through
+consecutive rows of a GT pattern of rectangular shape,
+with all entries not on the path frozen by the flag
+conditions.  This connects the fence Ehrhart polynomial
+to flagged Schur functions and may explain the clean
+Chebyshev-type structure of~\eqref{eq:fenceCharGF}.
+\end{remark}
 
 
 \bibliographystyle{amsalpha}
