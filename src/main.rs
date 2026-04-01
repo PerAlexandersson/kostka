@@ -1,20 +1,23 @@
 //! CLI for computing Kostka coefficients, Ehrhart polynomials, and h*-vectors
 //! of Gelfand-Tsetlin polytopes.  See `kostka --help` for usage.
 
-mod partition;
-mod kostka_dp;
-mod gt_dim;
 mod ehrhart;
+mod gt_dim;
+mod kostka_dp;
+mod lr;
+mod partition;
+mod populate;
 mod syt;
 mod table;
-mod populate;
-mod lr;
 
 use clap::{Parser, Subcommand};
-use partition::{parse_partition, parse_weight, Partition};
-use kostka_dp::{kostka, skew_kostka, strict_kostka, strict_skew_kostka, flagged_skew_kostka};
+use ehrhart::{
+    compute_ehrhart, compute_ehrhart_legacy, compute_hstar, is_palindromic, is_unimodal,
+    verify_reciprocity,
+};
 use gt_dim::gt_polytope_dim_full;
-use ehrhart::{compute_ehrhart, compute_hstar, is_palindromic, is_unimodal, verify_reciprocity};
+use kostka_dp::{flagged_skew_kostka, kostka, skew_kostka, strict_kostka, strict_skew_kostka};
+use partition::{parse_partition, parse_weight, Partition};
 use syt::{count_syt, hook_lengths};
 
 // ── top-level CLI ───────────────────────────────────────────────────────────────
@@ -252,6 +255,10 @@ EXAMPLES:
         /// Use plain positive-dilation interpolation n=1,...,d+1 instead of reciprocity
         #[arg(long)]
         no_reciprocity: bool,
+
+        /// Also run the legacy vector-building DP and print a timing/equality comparison
+        #[arg(long)]
+        compare_legacy: bool,
     },
 
     /// Interior lattice points of GT(λ/μ, w): strict GT pattern count
@@ -448,17 +455,35 @@ EXAMPLES:
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Command::Kostka { lambda, weight, format, max_states } => {
+        Command::Kostka {
+            lambda,
+            weight,
+            format,
+            max_states,
+        } => {
             let lam = parse_part(&lambda);
             let w = parse_wt(&weight);
             let k = kostka(&lam, &w, max_states);
             match format.as_str() {
-                "json" => println!("{{\"lambda\":{},\"weight\":{},\"value\":\"{}\"}}", json_ints(lam.parts()), json_ints(&w), k),
-                "csv"  => println!("{},{},{}", lam, weight, k),
-                _      => println!("K( {} | {} ) = {}", lam, format_weight(&w), k),
+                "json" => println!(
+                    "{{\"lambda\":{},\"weight\":{},\"value\":\"{}\"}}",
+                    json_ints(lam.parts()),
+                    json_ints(&w),
+                    k
+                ),
+                "csv" => println!("{},{},{}", lam, weight, k),
+                _ => println!("K( {} | {} ) = {}", lam, format_weight(&w), k),
             }
         }
-        Command::Skew { lambda, mu, weight, upper_flags, lower_flags, format, max_states } => {
+        Command::Skew {
+            lambda,
+            mu,
+            weight,
+            upper_flags,
+            lower_flags,
+            format,
+            max_states,
+        } => {
             let lam = parse_part(&lambda);
             let inner = parse_part(&mu);
             let w = parse_wt(&weight);
@@ -470,54 +495,137 @@ fn main() {
                 skew_kostka(&lam, &inner, &w, max_states, true)
             };
             match format.as_str() {
-                "json" => println!("{{\"lambda\":{},\"mu\":{},\"weight\":{},\"value\":\"{}\"}}", json_ints(lam.parts()), json_ints(inner.parts()), json_ints(&w), k),
-                "csv"  => println!("{},{},{},{}", lam, inner, weight, k),
-                _      => println!("K( {}/{} | {} ) = {}", lam, inner, format_weight(&w), k),
+                "json" => println!(
+                    "{{\"lambda\":{},\"mu\":{},\"weight\":{},\"value\":\"{}\"}}",
+                    json_ints(lam.parts()),
+                    json_ints(inner.parts()),
+                    json_ints(&w),
+                    k
+                ),
+                "csv" => println!("{},{},{},{}", lam, inner, weight, k),
+                _ => println!("K( {}/{} | {} ) = {}", lam, inner, format_weight(&w), k),
             }
         }
-        Command::Degree { lambda, mu, weight, upper_flags, lower_flags, verbose: _ } => {
+        Command::Degree {
+            lambda,
+            mu,
+            weight,
+            upper_flags,
+            lower_flags,
+            verbose: _,
+        } => {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let w = parse_wt(&weight);
             let uf = parse_opt_weight(upper_flags.as_deref());
             let lf = parse_opt_weight(lower_flags.as_deref());
-            let deg = gt_polytope_dim_full(lam.parts(), inner.parts(), &w, uf.as_deref(), lf.as_deref());
+            let deg =
+                gt_polytope_dim_full(lam.parts(), inner.parts(), &w, uf.as_deref(), lf.as_deref());
             match deg {
-                None    => println!("degree: empty polytope"),
+                None => println!("degree: empty polytope"),
                 Some(d) => println!("degree: {}", d),
             }
         }
-        Command::Ehrhart { lambda, mu, weight, upper_flags, lower_flags, show_values, format, verbose: _, max_states, verify_reciprocity: n_checks, no_reciprocity } => {
+        Command::Ehrhart {
+            lambda,
+            mu,
+            weight,
+            upper_flags,
+            lower_flags,
+            show_values,
+            format,
+            verbose: _,
+            max_states,
+            verify_reciprocity: n_checks,
+            no_reciprocity,
+            compare_legacy,
+        } => {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let w = parse_wt(&weight);
             let uf = parse_opt_weight(upper_flags.as_deref());
             let lf = parse_opt_weight(lower_flags.as_deref());
-            let poly = compute_ehrhart(&lam, &inner, &w, uf.as_deref(), lf.as_deref(), false, max_states, !no_reciprocity);
+            let start = std::time::Instant::now();
+            let poly = compute_ehrhart(
+                &lam,
+                &inner,
+                &w,
+                uf.as_deref(),
+                lf.as_deref(),
+                false,
+                max_states,
+                !no_reciprocity,
+            );
+            let fast_elapsed = start.elapsed();
             let shape = skew_shape_str(&lam, &inner);
             match format.as_str() {
                 "json" => {
-                    let vals: Vec<String> = (1..=show_values).map(|n| poly.eval(n).to_string()).collect();
+                    let vals: Vec<String> = (1..=show_values)
+                        .map(|n| poly.eval(n).to_string())
+                        .collect();
                     println!("{{\"lambda\":{},\"mu\":{},\"weight\":{},\"degree\":{},\"polynomial\":\"{}\",\"values\":[{}]}}",
                         json_ints(lam.parts()), json_ints(inner.parts()), json_ints(&w),
                         poly.degree, poly.display(), vals.join(","));
                 }
-                "csv" => println!("{},{},{},{},\"{}\"", lam, inner, weight, poly.degree, poly.display()),
+                "csv" => println!(
+                    "{},{},{},{},\"{}\"",
+                    lam,
+                    inner,
+                    weight,
+                    poly.degree,
+                    poly.display()
+                ),
                 _ => {
-                    println!("Ehrhart polynomial of GT( {} | {} ):", shape, format_weight(&w));
+                    println!(
+                        "Ehrhart polynomial of GT( {} | {} ):",
+                        shape,
+                        format_weight(&w)
+                    );
                     println!("  degree:     {}", poly.degree);
                     println!("  polynomial: {}", poly.display_factored());
-                    let vals: Vec<String> = (1..=show_values).map(|n| format!("n={} -> {}", n, poly.eval(n))).collect();
+                    let vals: Vec<String> = (1..=show_values)
+                        .map(|n| format!("n={} -> {}", n, poly.eval(n)))
+                        .collect();
                     println!("  values:     {}", vals.join(",  "));
                 }
             }
+            if compare_legacy {
+                let legacy_start = std::time::Instant::now();
+                let legacy = compute_ehrhart_legacy(
+                    &lam,
+                    &inner,
+                    &w,
+                    uf.as_deref(),
+                    lf.as_deref(),
+                    false,
+                    max_states,
+                    !no_reciprocity,
+                );
+                let legacy_elapsed = legacy_start.elapsed();
+                let matches = poly.degree == legacy.degree && poly.coeffs == legacy.coeffs;
+                println!("Legacy comparison:");
+                println!("  optimized: {} ms", fast_elapsed.as_millis());
+                println!("  legacy:    {} ms", legacy_elapsed.as_millis());
+                println!("  match:     {}", if matches { "yes" } else { "NO" });
+            }
             if n_checks > 0 {
-                println!("Verifying Ehrhart-Macdonald reciprocity ({} checks):", n_checks);
+                println!(
+                    "Verifying Ehrhart-Macdonald reciprocity ({} checks):",
+                    n_checks
+                );
                 let ok = verify_reciprocity(&poly, &lam, &inner, &w, n_checks, max_states);
-                println!("  result: {}", if ok { "ALL PASSED" } else { "FAILURES FOUND" });
+                println!(
+                    "  result: {}",
+                    if ok { "ALL PASSED" } else { "FAILURES FOUND" }
+                );
             }
         }
-        Command::StrictKostka { lambda, mu, weight, max_states } => {
+        Command::StrictKostka {
+            lambda,
+            mu,
+            weight,
+            max_states,
+        } => {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let w = parse_wt(&weight);
@@ -529,17 +637,43 @@ fn main() {
             let shape = skew_shape_str(&lam, &inner);
             println!("K_strict( {} | {} ) = {}", shape, format_weight(&w), k);
         }
-        Command::Hstar { lambda, mu, weight, upper_flags, lower_flags, format, verbose: _, max_states, no_reciprocity } => {
+        Command::Hstar {
+            lambda,
+            mu,
+            weight,
+            upper_flags,
+            lower_flags,
+            format,
+            verbose: _,
+            max_states,
+            no_reciprocity,
+        } => {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let w = parse_wt(&weight);
             let uf = parse_opt_weight(upper_flags.as_deref());
             let lf = parse_opt_weight(lower_flags.as_deref());
-            let poly = compute_ehrhart(&lam, &inner, &w, uf.as_deref(), lf.as_deref(), false, max_states, !no_reciprocity);
+            let poly = compute_ehrhart(
+                &lam,
+                &inner,
+                &w,
+                uf.as_deref(),
+                lf.as_deref(),
+                false,
+                max_states,
+                !no_reciprocity,
+            );
             let hstar = compute_hstar(&poly);
             let pal = is_palindromic(&hstar);
             let uni = is_unimodal(&hstar);
-            let hstar_str = format!("[{}]", hstar.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", "));
+            let hstar_str = format!(
+                "[{}]",
+                hstar
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
             let shape = skew_shape_str(&lam, &inner);
             match format.as_str() {
                 "json" => println!("{{\"lambda\":{},\"mu\":{},\"weight\":{},\"degree\":{},\"hstar\":[{}],\"palindromic\":{},\"unimodal\":{}}}",
@@ -561,7 +695,15 @@ fn main() {
             println!("f^({}) = {}", lam, count);
             if hooks {
                 let hs = hook_lengths(&lam);
-                let rows: Vec<String> = hs.iter().map(|row| row.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(" ")).collect();
+                let rows: Vec<String> = hs
+                    .iter()
+                    .map(|row| {
+                        row.iter()
+                            .map(|h| h.to_string())
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    })
+                    .collect();
                 println!("hook lengths: {}", rows.join(" / "));
             }
         }
@@ -571,7 +713,13 @@ fn main() {
         Command::Populate(args) => {
             populate::run(args);
         }
-        Command::Lr { lambda, mu, nu, format, max_states } => {
+        Command::Lr {
+            lambda,
+            mu,
+            nu,
+            format,
+            max_states,
+        } => {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let nu_part = parse_part(&nu);
@@ -583,16 +731,26 @@ fn main() {
 // ── parsing helpers ────────────────────────────────────────────────────────────
 
 fn parse_part(s: &str) -> Partition {
-    parse_partition(s).unwrap_or_else(|e| { eprintln!("{}", e); std::process::exit(1); })
+    parse_partition(s).unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        std::process::exit(1);
+    })
 }
 
 fn parse_wt(s: &str) -> Vec<u32> {
-    parse_weight(s).unwrap_or_else(|e| { eprintln!("{}", e); std::process::exit(1); })
+    parse_weight(s).unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        std::process::exit(1);
+    })
 }
 
 /// Parse an optional inner shape: empty string → empty partition.
 fn parse_inner(s: &str) -> Partition {
-    if s.is_empty() { Partition::empty() } else { parse_part(s) }
+    if s.is_empty() {
+        Partition::empty()
+    } else {
+        parse_part(s)
+    }
 }
 
 fn parse_opt_weight(s: Option<&str>) -> Option<Vec<u32>> {
@@ -602,13 +760,26 @@ fn parse_opt_weight(s: Option<&str>) -> Option<Vec<u32>> {
 // ── formatting helpers ─────────────────────────────────────────────────────────
 
 fn format_weight(w: &[u32]) -> String {
-    w.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")
+    w.iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn json_ints(v: &[u32]) -> String {
-    format!("[{}]", v.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","))
+    format!(
+        "[{}]",
+        v.iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    )
 }
 
 fn skew_shape_str(lam: &Partition, inner: &Partition) -> String {
-    if inner.num_parts() == 0 { format!("{}", lam) } else { format!("{}/{}", lam, inner) }
+    if inner.num_parts() == 0 {
+        format!("{}", lam)
+    } else {
+        format!("{}/{}", lam, inner)
+    }
 }

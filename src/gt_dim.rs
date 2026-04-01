@@ -216,23 +216,47 @@ fn gt_polytope_dim_impl(
         macro_rules! apply_flag {
             ($ell:expr, $j:expr) => {{
                 let ell = $ell;
-                let j   = $j;
+                let j = $j;
                 if ell == 0 {
                     let val = mu_pad[j];
-                    if lb[0][j] < val { lb[0][j] = val; changed = true; }
-                    if ub[0][j] > val { ub[0][j] = val; changed = true; }
+                    if lb[0][j] < val {
+                        lb[0][j] = val;
+                        changed = true;
+                    }
+                    if ub[0][j] > val {
+                        ub[0][j] = val;
+                        changed = true;
+                    }
                 } else if ell < n_int {
                     let new_lb = lb[ell][j].max(lb[ell - 1][j]);
                     let new_ub = ub[ell][j].min(ub[ell - 1][j]);
-                    if lb[ell][j]   != new_lb { lb[ell][j]   = new_lb; changed = true; }
-                    if ub[ell][j]   != new_ub { ub[ell][j]   = new_ub; changed = true; }
-                    if lb[ell-1][j] != new_lb { lb[ell-1][j] = new_lb; changed = true; }
-                    if ub[ell-1][j] != new_ub { ub[ell-1][j] = new_ub; changed = true; }
+                    if lb[ell][j] != new_lb {
+                        lb[ell][j] = new_lb;
+                        changed = true;
+                    }
+                    if ub[ell][j] != new_ub {
+                        ub[ell][j] = new_ub;
+                        changed = true;
+                    }
+                    if lb[ell - 1][j] != new_lb {
+                        lb[ell - 1][j] = new_lb;
+                        changed = true;
+                    }
+                    if ub[ell - 1][j] != new_ub {
+                        ub[ell - 1][j] = new_ub;
+                        changed = true;
+                    }
                 } else {
                     // ell == n_int: last weight part, α^{n_int}_j must equal λ_j.
                     let val = lambda[j];
-                    if lb[n_int-1][j] < val { lb[n_int-1][j] = val; changed = true; }
-                    if ub[n_int-1][j] > val { ub[n_int-1][j] = val; changed = true; }
+                    if lb[n_int - 1][j] < val {
+                        lb[n_int - 1][j] = val;
+                        changed = true;
+                    }
+                    if ub[n_int - 1][j] > val {
+                        ub[n_int - 1][j] = val;
+                        changed = true;
+                    }
                 }
             }};
         }
@@ -315,8 +339,8 @@ mod tests {
 
     // Helper: compute the empirical Ehrhart degree by sampling K(nλ, nw).
     fn empirical_degree(lambda: &[u32], mu: &[u32], w: &[u32], max_n: u64) -> usize {
-        use crate::partition::Partition;
         use crate::kostka_dp::skew_kostka;
+        use crate::partition::Partition;
         use num_bigint::ToBigInt;
         use num_rational::BigRational;
         use num_traits::Zero;
@@ -341,9 +365,7 @@ mod tests {
         // Compute degree via finite differences.
         let mut diffs = values;
         for step in 0..max_n as usize {
-            let new_diffs: Vec<BigRational> = diffs.windows(2)
-                .map(|w| &w[1] - &w[0])
-                .collect();
+            let new_diffs: Vec<BigRational> = diffs.windows(2).map(|w| &w[1] - &w[0]).collect();
             if new_diffs.iter().all(|v| v.is_zero()) {
                 return step;
             }
@@ -439,7 +461,10 @@ mod tests {
         assert_eq!(gt_polytope_dim(&[2, 2], &[], &[1, 1, 1, 1]), Some(1));
 
         // λ=(3,2,1), w=(1,1,1,1,1,1): dim should be 7
-        assert_eq!(gt_polytope_dim(&[3, 2, 1], &[], &[1, 1, 1, 1, 1, 1]), Some(7));
+        assert_eq!(
+            gt_polytope_dim(&[3, 2, 1], &[], &[1, 1, 1, 1, 1, 1]),
+            Some(7)
+        );
     }
 
     /// Exhaustive test: all skew shapes with |λ| ≤ 5, all partition weights.
@@ -459,11 +484,7 @@ mod tests {
                     let mus = if mu_size == 0 {
                         vec![Partition::empty()]
                     } else {
-                        Partition::all_of_size_bounded(
-                            mu_size,
-                            lambda.len(),
-                            lambda[0],
-                        )
+                        Partition::all_of_size_bounded(mu_size, lambda.len(), lambda[0])
                     };
                     for mu_p in &mus {
                         let mu = mu_p.parts();
@@ -471,7 +492,9 @@ mod tests {
                             continue;
                         }
                         let s = lam_size - mu_size;
-                        if s == 0 { continue; }
+                        if s == 0 {
+                            continue;
+                        }
 
                         // All partitions of s (= all weights with weakly
                         // decreasing positive parts summing to s).
@@ -494,7 +517,10 @@ mod tests {
                 }
             }
         }
-        eprintln!("chain_model_skew_all_partition_weights: tested {} cases", count);
+        eprintln!(
+            "chain_model_skew_all_partition_weights: tested {} cases",
+            count
+        );
     }
 
     /// 30 larger cases with |λ| in 8..15, random μ ⊂ λ, various partition weights.
@@ -505,37 +531,37 @@ mod tests {
         // Short weights (small k) keep the empirical verification fast.
         let cases: Vec<(&[u32], &[u32], &[u32])> = vec![
             // Non-skew, compact weights (k ≤ 5)
-            (&[5, 4, 3, 2, 1], &[], &[5,4,3,2,1]),                         // 1
-            (&[5, 4, 3, 2, 1], &[], &[3,3,3,3,3]),                         // 2
-            (&[6, 5, 4], &[], &[5,5,5]),                                    // 3
-            (&[4, 4, 4, 4], &[], &[4,4,4,4]),                               // 4
-            (&[8, 5, 2], &[], &[5,5,5]),                                    // 5
-            (&[7, 3, 2, 1], &[], &[4,3,3,3]),                               // 6
-            (&[5, 5, 5], &[], &[5,5,5]),                                    // 7
-            (&[6, 3, 3], &[], &[4,4,4]),                                    // 8
-            (&[4, 3, 3, 2], &[], &[6,6]),                                   // 9
-            (&[4, 3, 3, 2], &[], &[4,4,4]),                                 // 10
-            (&[6, 6, 3], &[], &[5,5,5]),                                    // 11
-            (&[7, 7], &[], &[7,7]),                                          // 12
-            (&[8, 4, 2, 1], &[], &[5,5,5]),                                 // 13
+            (&[5, 4, 3, 2, 1], &[], &[5, 4, 3, 2, 1]), // 1
+            (&[5, 4, 3, 2, 1], &[], &[3, 3, 3, 3, 3]), // 2
+            (&[6, 5, 4], &[], &[5, 5, 5]),             // 3
+            (&[4, 4, 4, 4], &[], &[4, 4, 4, 4]),       // 4
+            (&[8, 5, 2], &[], &[5, 5, 5]),             // 5
+            (&[7, 3, 2, 1], &[], &[4, 3, 3, 3]),       // 6
+            (&[5, 5, 5], &[], &[5, 5, 5]),             // 7
+            (&[6, 3, 3], &[], &[4, 4, 4]),             // 8
+            (&[4, 3, 3, 2], &[], &[6, 6]),             // 9
+            (&[4, 3, 3, 2], &[], &[4, 4, 4]),          // 10
+            (&[6, 6, 3], &[], &[5, 5, 5]),             // 11
+            (&[7, 7], &[], &[7, 7]),                   // 12
+            (&[8, 4, 2, 1], &[], &[5, 5, 5]),          // 13
             // Skew shapes, compact weights
-            (&[6, 5, 4], &[3, 2], &[5,5]),                                  // 14
-            (&[5, 4, 3, 2, 1], &[2, 1], &[4,4,4]),                         // 15
-            (&[7, 5, 3], &[2, 1], &[4,4,4]),                                // 16
-            (&[8, 6, 4], &[3, 2, 1], &[4,4,4]),                             // 17
-            (&[8, 6, 4], &[3, 2, 1], &[6,6]),                               // 18
-            (&[6, 4, 4, 2], &[2, 2], &[4,4,4]),                             // 19
-            (&[5, 5, 5], &[2, 2, 2], &[3,3,3]),                             // 20
-            (&[7, 4, 3, 1], &[3, 1], &[4,3,2,2]),                           // 21
-            (&[6, 6, 3], &[2, 1], &[4,4,4]),                                // 22
-            (&[8, 4, 2, 1], &[3], &[4,3,3,2]),                              // 23
-            (&[6, 5, 3, 1], &[2, 1], &[4,4,4]),                             // 24
-            (&[7, 5, 3, 1], &[3, 2, 1], &[5,5]),                            // 25
-            (&[5, 4, 3], &[2, 1], &[3,3,3]),                                // 26
-            (&[9, 5, 1], &[3], &[4,4,4]),                                   // 27
-            (&[6, 4, 2], &[1, 1], &[5,5]),                                  // 28
-            (&[8, 8, 4], &[3, 3], &[7,7]),                                  // 29
-            (&[10, 5], &[3], &[4,4,4]),                                     // 30
+            (&[6, 5, 4], &[3, 2], &[5, 5]),          // 14
+            (&[5, 4, 3, 2, 1], &[2, 1], &[4, 4, 4]), // 15
+            (&[7, 5, 3], &[2, 1], &[4, 4, 4]),       // 16
+            (&[8, 6, 4], &[3, 2, 1], &[4, 4, 4]),    // 17
+            (&[8, 6, 4], &[3, 2, 1], &[6, 6]),       // 18
+            (&[6, 4, 4, 2], &[2, 2], &[4, 4, 4]),    // 19
+            (&[5, 5, 5], &[2, 2, 2], &[3, 3, 3]),    // 20
+            (&[7, 4, 3, 1], &[3, 1], &[4, 3, 2, 2]), // 21
+            (&[6, 6, 3], &[2, 1], &[4, 4, 4]),       // 22
+            (&[8, 4, 2, 1], &[3], &[4, 3, 3, 2]),    // 23
+            (&[6, 5, 3, 1], &[2, 1], &[4, 4, 4]),    // 24
+            (&[7, 5, 3, 1], &[3, 2, 1], &[5, 5]),    // 25
+            (&[5, 4, 3], &[2, 1], &[3, 3, 3]),       // 26
+            (&[9, 5, 1], &[3], &[4, 4, 4]),          // 27
+            (&[6, 4, 2], &[1, 1], &[5, 5]),          // 28
+            (&[8, 8, 4], &[3, 3], &[7, 7]),          // 29
+            (&[10, 5], &[3], &[4, 4, 4]),            // 30
         ];
 
         for (i, &(lambda, mu, w)) in cases.iter().enumerate() {
@@ -544,9 +570,15 @@ mod tests {
             let max_n = (fast_val + 3).max(4) as u64;
             let emp = empirical_degree(lambda, mu, w, max_n);
             assert_eq!(
-                fast_val, emp,
+                fast_val,
+                emp,
                 "case {}: lambda={:?}, mu={:?}, w={:?}: fast={:?} empirical={}",
-                i + 1, lambda, mu, w, fast, emp
+                i + 1,
+                lambda,
+                mu,
+                w,
+                fast,
+                emp
             );
         }
         eprintln!("chain_model_random_larger: tested {} cases", cases.len());
@@ -559,16 +591,20 @@ mod tests {
         //   dim = T(n-1) - Σ T(mᵢ-1) - active_weight
         // which equals the triangular GT model result.
         let cases: Vec<(&[u32], Vec<u32>, usize)> = vec![
-            (&[3, 2, 1], vec![1, 2, 3], 0),  // k=n=3, distinct parts — weight at min forces all entries
-            (&[4, 4, 2], vec![2, 4, 4], 0),   // k=n=3, run of 2 — all entries forced
-            (&[3, 3, 3], vec![3, 3, 3], 0),   // all equal
+            (&[3, 2, 1], vec![1, 2, 3], 0), // k=n=3, distinct parts — weight at min forces all entries
+            (&[4, 4, 2], vec![2, 4, 4], 0), // k=n=3, run of 2 — all entries forced
+            (&[3, 3, 3], vec![3, 3, 3], 0), // all equal
         ];
         for (lambda, w, expected) in &cases {
             let dim = gt_polytope_dim(lambda, &[], w);
             assert_eq!(
-                dim, Some(*expected),
+                dim,
+                Some(*expected),
                 "lambda={:?}, w={:?}: got {:?} expected Some({})",
-                lambda, w, dim, expected
+                lambda,
+                w,
+                dim,
+                expected
             );
         }
     }

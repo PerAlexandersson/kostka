@@ -1,3 +1,8 @@
+use crate::gt_dim::gt_polytope_dim;
+use crate::kostka_dp::{
+    skew_kostka, skew_kostka_legacy, strict_skew_kostka, strict_skew_kostka_legacy,
+};
+use crate::partition::Partition;
 /// Ehrhart polynomial computation for GT(lambda/mu, w).
 ///
 /// By Rassart (2004), the function n ↦ K(n*lambda / n*mu, n*w) is a polynomial in n.
@@ -9,14 +14,10 @@
 ///
 /// The polynomial is stored as a Vec<BigRational> of length d+1,
 /// where poly[k] is the coefficient of n^k (index 0 = constant term).
-
 use num_bigint::{BigInt, BigUint, ToBigInt};
 use num_rational::BigRational;
-use num_traits::{Zero, One};
+use num_traits::{One, Zero};
 use rayon::prelude::*;
-use crate::partition::Partition;
-use crate::kostka_dp::{skew_kostka, strict_skew_kostka};
-use crate::gt_dim::gt_polytope_dim;
 
 pub struct EhrhartPoly {
     /// Coefficients of the polynomial in n: poly[k] = coeff of n^k.
@@ -52,16 +53,34 @@ impl EhrhartPoly {
         let mut terms: Vec<String> = Vec::new();
         for k in (0..=d).rev() {
             let c = &self.coeffs[k];
-            if c.is_zero() { continue; }
+            if c.is_zero() {
+                continue;
+            }
             let c_str = format_rat(c);
             let term = match k {
                 0 => c_str,
-                1 => if c == &BigRational::one() { "n".into() } else { format!("{}n", c_str) },
-                _ => if c == &BigRational::one() { format!("n^{}", k) } else { format!("{}n^{}", c_str, k) },
+                1 => {
+                    if c == &BigRational::one() {
+                        "n".into()
+                    } else {
+                        format!("{}n", c_str)
+                    }
+                }
+                _ => {
+                    if c == &BigRational::one() {
+                        format!("n^{}", k)
+                    } else {
+                        format!("{}n^{}", c_str, k)
+                    }
+                }
             };
             terms.push(term);
         }
-        if terms.is_empty() { "0".into() } else { terms.join(" + ") }
+        if terms.is_empty() {
+            "0".into()
+        } else {
+            terms.join(" + ")
+        }
     }
 
     /// Display as (1/d!) * (integer polynomial), where d = degree.
@@ -77,7 +96,8 @@ impl EhrhartPoly {
         let d_fact_r = BigRational::from(d_fact.clone());
 
         // Integer coefficients: c_k * d!
-        let int_coeffs: Vec<BigInt> = self.coeffs[..=d].iter()
+        let int_coeffs: Vec<BigInt> = self.coeffs[..=d]
+            .iter()
             .map(|c| (c * &d_fact_r).to_integer())
             .collect();
 
@@ -105,12 +125,22 @@ fn format_int_poly(coeffs: &[BigInt]) -> String {
     let mut terms: Vec<String> = Vec::new();
     for k in (0..=d).rev() {
         let c = &coeffs[k];
-        if c.is_zero() { continue; }
+        if c.is_zero() {
+            continue;
+        }
         let c_abs = c.magnitude().clone();
         let sign: String = if terms.is_empty() {
-            if *c < BigInt::zero() { "-".into() } else { "".into() }
+            if *c < BigInt::zero() {
+                "-".into()
+            } else {
+                "".into()
+            }
         } else {
-            if *c < BigInt::zero() { " - ".into() } else { " + ".into() }
+            if *c < BigInt::zero() {
+                " - ".into()
+            } else {
+                " + ".into()
+            }
         };
         let mag_str = if c_abs == num_bigint::BigUint::from(1u32) && k > 0 {
             "".into()
@@ -124,7 +154,11 @@ fn format_int_poly(coeffs: &[BigInt]) -> String {
         };
         terms.push(format!("{}{}{}", sign, mag_str, var_str));
     }
-    if terms.is_empty() { "0".into() } else { terms.join("") }
+    if terms.is_empty() {
+        "0".into()
+    } else {
+        terms.join("")
+    }
 }
 
 /// Compute the Ehrhart polynomial of GT(lambda/mu, w).
@@ -147,15 +181,65 @@ pub fn compute_ehrhart(
     w: &[u32],
     upper_flags: Option<&[u32]>,
     lower_flags: Option<&[u32]>,
+    verbose: bool,
+    max_states: Option<usize>,
+    use_reciprocity: bool,
+) -> EhrhartPoly {
+    compute_ehrhart_impl(
+        lambda,
+        mu,
+        w,
+        upper_flags,
+        lower_flags,
+        verbose,
+        max_states,
+        use_reciprocity,
+        false,
+    )
+}
+
+pub fn compute_ehrhart_legacy(
+    lambda: &Partition,
+    mu: &Partition,
+    w: &[u32],
+    upper_flags: Option<&[u32]>,
+    lower_flags: Option<&[u32]>,
+    verbose: bool,
+    max_states: Option<usize>,
+    use_reciprocity: bool,
+) -> EhrhartPoly {
+    compute_ehrhart_impl(
+        lambda,
+        mu,
+        w,
+        upper_flags,
+        lower_flags,
+        verbose,
+        max_states,
+        use_reciprocity,
+        true,
+    )
+}
+
+fn compute_ehrhart_impl(
+    lambda: &Partition,
+    mu: &Partition,
+    w: &[u32],
+    upper_flags: Option<&[u32]>,
+    lower_flags: Option<&[u32]>,
     _verbose: bool,
     max_states: Option<usize>,
     use_reciprocity: bool,
+    use_legacy_dp: bool,
 ) -> EhrhartPoly {
     // Early exit: sizes must be compatible for a non-empty polytope.
     let skew_size = lambda.size().saturating_sub(mu.size());
     let w_size: u32 = w.iter().sum();
     if skew_size != w_size {
-        return EhrhartPoly { coeffs: vec![BigRational::zero()], degree: 0 };
+        return EhrhartPoly {
+            coeffs: vec![BigRational::zero()],
+            degree: 0,
+        };
     }
 
     // Only reorder w when no flag bounds are active (flags are tied to w's row ordering).
@@ -164,7 +248,12 @@ pub fn compute_ehrhart(
     let use_recip = use_reciprocity && sort_weight;
 
     let d = match gt_polytope_dim(lambda.parts(), mu.parts(), w) {
-        None => return EhrhartPoly { coeffs: vec![BigRational::zero()], degree: 0 },
+        None => {
+            return EhrhartPoly {
+                coeffs: vec![BigRational::zero()],
+                degree: 0,
+            }
+        }
         Some(d) => d,
     };
 
@@ -172,7 +261,10 @@ pub fn compute_ehrhart(
         // P(0) = 1 always (the trivial chain μ=μ is the unique point at dilation 0).
         if d == 0 {
             // Constant polynomial.  No DP evaluation needed.
-            return EhrhartPoly { coeffs: vec![BigRational::one()], degree: 0 };
+            return EhrhartPoly {
+                coeffs: vec![BigRational::one()],
+                degree: 0,
+            };
         }
 
         // Sequential adaptive reciprocity strategy:
@@ -200,7 +292,11 @@ pub fn compute_ehrhart(
                 let tl = scale_partition(lambda, neg_t);
                 let tm_p = scale_partition(mu, neg_t);
                 let tw: Vec<u32> = w.iter().map(|&x| x * neg_t as u32).collect();
-                let ks = strict_skew_kostka(&tl, &tm_p, &tw, max_states, false);
+                let ks = if use_legacy_dp {
+                    strict_skew_kostka_legacy(&tl, &tm_p, &tw, max_states, false)
+                } else {
+                    strict_skew_kostka(&tl, &tm_p, &tw, max_states, false)
+                };
                 let ks_r = BigRational::from(ks.to_bigint().unwrap());
                 let p_val = if sign_pos { ks_r } else { -ks_r };
                 points.push((-(neg_t as i64), p_val));
@@ -211,7 +307,11 @@ pub fn compute_ehrhart(
                 let tl = scale_partition(lambda, pos_t);
                 let tm_p = scale_partition(mu, pos_t);
                 let tw: Vec<u32> = w.iter().map(|&x| x * pos_t as u32).collect();
-                let k = skew_kostka(&tl, &tm_p, &tw, max_states, true);
+                let k = if use_legacy_dp {
+                    skew_kostka_legacy(&tl, &tm_p, &tw, max_states, true)
+                } else {
+                    skew_kostka(&tl, &tm_p, &tw, max_states, true)
+                };
                 let k_r = BigRational::from(k.to_bigint().unwrap());
                 points.push((pos_t as i64, k_r));
                 last_pos_count = k;
@@ -219,11 +319,17 @@ pub fn compute_ehrhart(
         }
 
         let coeffs = poly_interpolate(&points);
-        let true_degree = coeffs.iter().enumerate().rev()
+        let true_degree = coeffs
+            .iter()
+            .enumerate()
+            .rev()
             .find(|(_, c)| !c.is_zero())
             .map(|(i, _)| i)
             .unwrap_or(0);
-        EhrhartPoly { coeffs, degree: true_degree }
+        EhrhartPoly {
+            coeffs,
+            degree: true_degree,
+        }
     } else {
         // Plain method: evaluate at n = 1, ..., d+1.
         let values: Vec<BigRational> = (1..=(d + 1) as u64)
@@ -232,17 +338,27 @@ pub fn compute_ehrhart(
                 let nl = scale_partition(lambda, n);
                 let nm = scale_partition(mu, n);
                 let nw: Vec<u32> = w.iter().map(|&x| x * n as u32).collect();
-                let k = skew_kostka(&nl, &nm, &nw, max_states, sort_weight);
+                let k = if use_legacy_dp {
+                    skew_kostka_legacy(&nl, &nm, &nw, max_states, sort_weight)
+                } else {
+                    skew_kostka(&nl, &nm, &nw, max_states, sort_weight)
+                };
                 BigRational::from(k.to_bigint().unwrap())
             })
             .collect();
 
         let coeffs = vandermonde_solve(&values);
-        let true_degree = coeffs.iter().enumerate().rev()
+        let true_degree = coeffs
+            .iter()
+            .enumerate()
+            .rev()
             .find(|(_, c)| !c.is_zero())
             .map(|(i, _)| i)
             .unwrap_or(0);
-        EhrhartPoly { coeffs, degree: true_degree }
+        EhrhartPoly {
+            coeffs,
+            degree: true_degree,
+        }
     }
 }
 
@@ -255,7 +371,7 @@ fn scale_partition(p: &Partition, n: u64) -> Partition {
 /// Uses Gaussian elimination over ℚ (d is small, typically ≤ 13).
 fn poly_interpolate(points: &[(i64, BigRational)]) -> Vec<BigRational> {
     let d = points.len(); // d+1 unknowns, so this yields a degree-(d-1) polynomial
-    // Build the augmented Vandermonde matrix: M[i][k] = x_i^k, last column = y_i.
+                          // Build the augmented Vandermonde matrix: M[i][k] = x_i^k, last column = y_i.
     let mut mat: Vec<Vec<BigRational>> = points
         .iter()
         .map(|&(x, ref y)| {
@@ -283,9 +399,13 @@ fn poly_interpolate(points: &[(i64, BigRational)]) -> Vec<BigRational> {
             mat[col][j] = v;
         }
         for row in 0..d {
-            if row == col { continue; }
+            if row == col {
+                continue;
+            }
             let factor = mat[row][col].clone();
-            if factor.is_zero() { continue; }
+            if factor.is_zero() {
+                continue;
+            }
             for j in col..=d {
                 let sub = factor.clone() * &mat[col][j];
                 mat[row][j] -= sub;
@@ -341,7 +461,11 @@ pub fn verify_reciprocity(
         let interior_r = BigRational::from(interior.to_bigint().unwrap());
 
         // (-1)^d * interior
-        let lhs = if sign_pos { interior_r.clone() } else { -interior_r.clone() };
+        let lhs = if sign_pos {
+            interior_r.clone()
+        } else {
+            -interior_r.clone()
+        };
 
         // P_Ehrhart(-t)
         let neg_t = BigRational::from(BigInt::from(-(t as i64)));
@@ -356,11 +480,23 @@ pub fn verify_reciprocity(
         if !ok {
             println!(
                 "  FAIL t={}: (-1)^{} * L_{{P°}}({}) = {} but P(-{}) = {}",
-                t, d, t, if sign_pos { interior_r.clone() } else { -interior_r.clone() }, t, rhs
+                t,
+                d,
+                t,
+                if sign_pos {
+                    interior_r.clone()
+                } else {
+                    -interior_r.clone()
+                },
+                t,
+                rhs
             );
             all_ok = false;
         } else {
-            println!("  OK   t={}: (-1)^{} * L_{{P°}}({}) = P(-{}) = {}", t, d, t, t, lhs);
+            println!(
+                "  OK   t={}: (-1)^{} * L_{{P°}}({}) = P(-{}) = {}",
+                t, d, t, t, lhs
+            );
         }
     }
     all_ok
@@ -390,7 +526,11 @@ pub fn compute_hstar(poly: &EhrhartPoly) -> Vec<BigInt> {
             // p_j should be an integer (Kostka number at n=j).
             let p_j_int = p_j.numer().clone(); // denom should be 1
             let binom = binom_int(d1 as i64, (k - j) as i64);
-            let sign = if (k - j) % 2 == 0 { BigInt::one() } else { -BigInt::one() };
+            let sign = if (k - j) % 2 == 0 {
+                BigInt::one()
+            } else {
+                -BigInt::one()
+            };
             val += sign * binom * p_j_int;
         }
         hstar[k] = val;
@@ -399,7 +539,9 @@ pub fn compute_hstar(poly: &EhrhartPoly) -> Vec<BigInt> {
 }
 
 fn binom_int(n: i64, k: i64) -> BigInt {
-    if k < 0 || k > n { return BigInt::zero(); }
+    if k < 0 || k > n {
+        return BigInt::zero();
+    }
     let mut result = BigInt::one();
     for i in 0..k {
         result = result * BigInt::from(n - i) / BigInt::from(i + 1);
@@ -416,12 +558,45 @@ pub fn is_palindromic(v: &[BigInt]) -> bool {
 pub fn is_unimodal(v: &[BigInt]) -> bool {
     let v = trim_trailing_zeros(v);
     let n = v.len();
-    if n <= 1 { return true; }
-    let peak = v.iter().enumerate().max_by_key(|(_, x)| (*x).clone()).map(|(i, _)| i).unwrap_or(0);
+    if n <= 1 {
+        return true;
+    }
+    let peak = v
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, x)| (*x).clone())
+        .map(|(i, _)| i)
+        .unwrap_or(0);
     (0..peak).all(|i| v[i] <= v[i + 1]) && (peak..n - 1).all(|i| v[i] >= v[i + 1])
 }
 
 fn trim_trailing_zeros(v: &[BigInt]) -> &[BigInt] {
-    let end = v.iter().rposition(|x| !x.is_zero()).map(|i| i + 1).unwrap_or(0);
+    let end = v
+        .iter()
+        .rposition(|x| !x.is_zero())
+        .map(|i| i + 1)
+        .unwrap_or(0);
     &v[..end]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn p(parts: &[u32]) -> Partition {
+        Partition::new(parts.to_vec())
+    }
+
+    #[test]
+    fn ehrhart_matches_legacy_dp() {
+        let lambda = p(&[3, 1, 1]);
+        let mu = Partition::empty();
+        let w = [1, 1, 1, 1, 1];
+
+        let fast = compute_ehrhart(&lambda, &mu, &w, None, None, false, None, true);
+        let legacy = compute_ehrhart_legacy(&lambda, &mu, &w, None, None, false, None, true);
+
+        assert_eq!(fast.degree, legacy.degree);
+        assert_eq!(fast.coeffs, legacy.coeffs);
+    }
 }

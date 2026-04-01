@@ -1,3 +1,7 @@
+use crate::kostka_dp::{horizontal_strip_extensions, kostka, skew_kostka};
+use crate::partition::Partition;
+use num_bigint::{BigInt, BigUint, ToBigInt};
+use num_traits::{One, Zero};
 /// Littlewood-Richardson coefficients c^λ_{μ,ν} via two methods:
 ///
 /// 1. **Augmented GT DP**: extends the Kostka DP with Yamanouchi constraints
@@ -6,13 +10,8 @@
 /// 2. **Kostka matrix inversion**: uses the identity
 ///      K(λ/μ, α) = Σ_ν c^λ_{μ,ν} K(ν, α)
 ///    solved by back-substitution in dominance order (K is upper unitriangular).
-
 use std::collections::HashMap;
 use std::time::Instant;
-use num_bigint::{BigUint, BigInt, ToBigInt};
-use num_traits::{Zero, One};
-use crate::partition::Partition;
-use crate::kostka_dp::{horizontal_strip_extensions, kostka, skew_kostka};
 
 // ── Method 1: Augmented GT DP with Yamanouchi ───────────────────────────────
 
@@ -39,7 +38,17 @@ fn yamanouchi_extensions(
 ) -> Vec<(Partition, Vec<u32>)> {
     let mut results = Vec::new();
     let mut increments = vec![0u32; n];
-    yamanouchi_enumerate(alpha, lambda, strip_size, d, 0, n, 0, &mut increments, &mut results);
+    yamanouchi_enumerate(
+        alpha,
+        lambda,
+        strip_size,
+        d,
+        0,
+        n,
+        0,
+        &mut increments,
+        &mut results,
+    );
     results
 }
 
@@ -82,13 +91,23 @@ fn yamanouchi_enumerate(
     } else {
         alpha.part(row - 1).saturating_sub(alpha.part(row))
     };
-    let max_c = remaining.min(max_from_lambda).min(max_from_strip).min(yam_bound);
+    let max_c = remaining
+        .min(max_from_lambda)
+        .min(max_from_strip)
+        .min(yam_bound);
 
     for c in 0..=max_c {
         increments[row] = c;
         yamanouchi_enumerate(
-            alpha, lambda, remaining - c, d, row + 1, n, cumsum + c,
-            increments, results,
+            alpha,
+            lambda,
+            remaining - c,
+            d,
+            row + 1,
+            n,
+            cumsum + c,
+            increments,
+            results,
         );
     }
     increments[row] = 0;
@@ -110,7 +129,11 @@ pub fn lr_dp(
         return BigUint::zero();
     }
     if w.is_empty() {
-        return if lambda == mu { BigUint::one() } else { BigUint::zero() };
+        return if lambda == mu {
+            BigUint::one()
+        } else {
+            BigUint::zero()
+        };
     }
 
     // Level 0 → 1: no Yamanouchi check (no previous letter to compare against).
@@ -141,7 +164,8 @@ pub fn lr_dp(
             if new_dp.len() > limit {
                 panic!(
                     "LR DP state count {} exceeds --max-states {}.",
-                    new_dp.len(), limit
+                    new_dp.len(),
+                    limit
                 );
             }
         }
@@ -198,7 +222,11 @@ pub fn lr_kostka_inverse(
         return BigInt::zero();
     }
     if n == 0 {
-        return if lambda == mu { BigInt::one() } else { BigInt::zero() };
+        return if lambda == mu {
+            BigInt::one()
+        } else {
+            BigInt::zero()
+        };
     }
 
     // All partitions of n in reverse-lex order (dominance-compatible).
@@ -212,9 +240,14 @@ pub fn lr_kostka_inverse(
     }
 
     // Skew Kostka: K(λ/μ, α) for each partition α.
-    let skew_k: Vec<BigInt> = parts.iter().map(|alpha| {
-        skew_kostka(lambda, mu, alpha, max_states, true).to_bigint().unwrap()
-    }).collect();
+    let skew_k: Vec<BigInt> = parts
+        .iter()
+        .map(|alpha| {
+            skew_kostka(lambda, mu, alpha, max_states, true)
+                .to_bigint()
+                .unwrap()
+        })
+        .collect();
 
     // Back-substitution.
     let mut c: Vec<BigInt> = vec![BigInt::zero(); num_parts];
@@ -240,11 +273,20 @@ pub fn lr_kostka_inverse(
 
     // Look up ν in the partition list.
     let nu_key = nu.parts().to_vec();
-    idx_of.get(&nu_key).map(|&i| c[i].clone()).unwrap_or_else(BigInt::zero)
+    idx_of
+        .get(&nu_key)
+        .map(|&i| c[i].clone())
+        .unwrap_or_else(BigInt::zero)
 }
 
 /// Compute and display c^λ_{μ,ν} via both methods, cross-checking the results.
-pub fn run(lambda: &Partition, mu: &Partition, nu: &Partition, format: &str, max_states: Option<usize>) {
+pub fn run(
+    lambda: &Partition,
+    mu: &Partition,
+    nu: &Partition,
+    format: &str,
+    max_states: Option<usize>,
+) {
     let t0 = Instant::now();
     let c_dp = lr_dp(lambda, mu, nu, max_states);
     let dp_ms = t0.elapsed().as_secs_f64() * 1000.0;
@@ -275,5 +317,12 @@ pub fn run(lambda: &Partition, mu: &Partition, nu: &Partition, format: &str, max
 }
 
 fn json_parts(p: &Partition) -> String {
-    format!("[{}]", p.parts().iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","))
+    format!(
+        "[{}]",
+        p.parts()
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    )
 }

@@ -1,21 +1,27 @@
+use crate::partition::Partition;
 /// Standard Young tableaux count via the hook-length formula.
 ///   f^lambda = n! / prod of all hook lengths
-
 use num_bigint::BigUint;
 use num_traits::One;
-use crate::partition::Partition;
 
 /// Compute hook lengths for all cells of lambda.
 /// hook(i, j) = lambda[i] - j + lambda'[j] - i - 1  (0-indexed i, j).
 pub fn hook_lengths(lambda: &Partition) -> Vec<Vec<u32>> {
     let conj = lambda.conjugate();
-    lambda.parts().iter().enumerate().map(|(i, &row_len)| {
-        (0..row_len as usize).map(|j| {
-            let arm = row_len - j as u32 - 1;
-            let leg = conj.part(j).saturating_sub(i as u32 + 1);
-            arm + leg + 1
-        }).collect()
-    }).collect()
+    lambda
+        .parts()
+        .iter()
+        .enumerate()
+        .map(|(i, &row_len)| {
+            (0..row_len as usize)
+                .map(|j| {
+                    let arm = row_len - j as u32 - 1;
+                    let leg = conj.part(j).saturating_sub(i as u32 + 1);
+                    arm + leg + 1
+                })
+                .collect()
+        })
+        .collect()
 }
 
 /// Count SYT of shape lambda using the hook-length formula.

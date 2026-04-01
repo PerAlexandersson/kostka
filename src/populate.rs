@@ -6,7 +6,6 @@
 ///
 /// Results are stored in a MariaDB table; already-computed rows are skipped
 /// on restart, enabling crash-resume.
-
 use clap::Args;
 use mysql::prelude::*;
 use mysql::*;
@@ -91,11 +90,18 @@ CREATE TABLE IF NOT EXISTS gt_ehrhart (
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 fn parts_str(p: &Partition) -> String {
-    p.parts().iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")
+    p.parts()
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn vec_str(v: &[u32]) -> String {
-    v.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")
+    v.iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn hstar_json(h: &[BigInt]) -> String {
@@ -141,11 +147,7 @@ fn valid_skew(lam: &Partition, mu: &Partition) -> bool {
 fn inner_shapes(lambda: &Partition) -> Vec<Partition> {
     let mut result = vec![Partition::empty()];
     for s in 1..lambda.size() {
-        for mu in Partition::all_of_size_bounded(
-            s,
-            lambda.num_parts(),
-            lambda.parts()[0],
-        ) {
+        for mu in Partition::all_of_size_bounded(s, lambda.num_parts(), lambda.parts()[0]) {
             if mu.contained_in(lambda) && valid_skew(lambda, &mu) {
                 result.push(mu);
             }
@@ -162,7 +164,13 @@ fn weakly_increasing_sequences(k: usize, max_val: u32) -> Vec<Vec<u32>> {
     result
 }
 
-fn wi_recurse(k: usize, max_val: u32, min_val: u32, current: &mut Vec<u32>, result: &mut Vec<Vec<u32>>) {
+fn wi_recurse(
+    k: usize,
+    max_val: u32,
+    min_val: u32,
+    current: &mut Vec<u32>,
+    result: &mut Vec<Vec<u32>>,
+) {
     if current.len() == k {
         result.push(current.clone());
         return;
@@ -176,11 +184,15 @@ fn wi_recurse(k: usize, max_val: u32, min_val: u32, current: &mut Vec<u32>, resu
 
 /// Batch-query: which (weight, upper_flags) pairs are already in the DB for a given (lambda, mu)?
 fn already_computed(conn: &mut PooledConn, lambda_str: &str, mu_str: &str) -> HashSet<String> {
-    let rows: Vec<(String, String)> = conn.exec(
-        "SELECT weight, upper_flags FROM gt_ehrhart WHERE lambda = ? AND mu = ?",
-        (lambda_str, mu_str),
-    ).unwrap_or_default();
-    rows.into_iter().map(|(w, uf)| format!("{}|{}", w, uf)).collect()
+    let rows: Vec<(String, String)> = conn
+        .exec(
+            "SELECT weight, upper_flags FROM gt_ehrhart WHERE lambda = ? AND mu = ?",
+            (lambda_str, mu_str),
+        )
+        .unwrap_or_default();
+    rows.into_iter()
+        .map(|(w, uf)| format!("{}|{}", w, uf))
+        .collect()
 }
 
 /// Batch-compute Ehrhart data and insert into MariaDB (crash-resumable).
@@ -196,15 +208,18 @@ pub fn run(args: PopulateArgs) {
             std::process::exit(1);
         });
         let mut conn = p.get_conn().expect("Failed to get connection");
-        conn.query_drop(CREATE_TABLE).expect("Failed to create table");
+        conn.query_drop(CREATE_TABLE)
+            .expect("Failed to create table");
         eprintln!("Connected to database.");
         Some(p)
     } else {
         None
     };
 
-    eprintln!("  max_n = {}, min_n = {}, skew = {}, flag = {}",
-        args.max_n, args.min_n, args.skew, args.flag);
+    eprintln!(
+        "  max_n = {}, min_n = {}, skew = {}, flag = {}",
+        args.max_n, args.min_n, args.skew, args.flag
+    );
     if args.dry_run {
         eprintln!("  DRY RUN: enumerating work items only.");
     }
@@ -227,7 +242,11 @@ pub fn run(args: PopulateArgs) {
             };
 
             for mu in &inners {
-                let mu_str = if mu.num_parts() == 0 { String::new() } else { parts_str(mu) };
+                let mu_str = if mu.num_parts() == 0 {
+                    String::new()
+                } else {
+                    parts_str(mu)
+                };
                 let skew_size = lam.size().saturating_sub(mu.size());
                 if skew_size == 0 {
                     continue;
@@ -282,15 +301,23 @@ pub fn run(args: PopulateArgs) {
                         }
 
                         if args.dry_run {
-                            eprintln!("  [dry] λ=({}) μ=({}) w=({}) uf=({})",
-                                lambda_str, mu_str, w_str, uf_str);
+                            eprintln!(
+                                "  [dry] λ=({}) μ=({}) w=({}) uf=({})",
+                                lambda_str, mu_str, w_str, uf_str
+                            );
                             total_computed += 1;
                             continue;
                         }
 
                         // Check dimension before expensive computation.
                         if args.max_dim.is_some() || args.min_dim.is_some() {
-                            let dim = gt_polytope_dim_full(lam.parts(), mu.parts(), w, uf.as_deref(), None);
+                            let dim = gt_polytope_dim_full(
+                                lam.parts(),
+                                mu.parts(),
+                                w,
+                                uf.as_deref(),
+                                None,
+                            );
                             if let Some(max) = args.max_dim {
                                 if dim.map_or(false, |d| d > max) {
                                     total_skipped += 1;
@@ -356,7 +383,8 @@ pub fn run(args: PopulateArgs) {
                                             &hstar_str,
                                             elapsed_ms,
                                         ),
-                                    ).unwrap_or_else(|e| {
+                                    )
+                                    .unwrap_or_else(|e| {
                                         eprintln!("  DB insert error: {}", e);
                                     });
                                 }
@@ -364,8 +392,10 @@ pub fn run(args: PopulateArgs) {
                                 total_computed += 1;
                             }
                             Err(_) => {
-                                eprintln!("  SKIP λ=({}) w=({}) uf=({}): DP state limit exceeded",
-                                    lambda_str, w_str, uf_str);
+                                eprintln!(
+                                    "  SKIP λ=({}) w=({}) uf=({}): DP state limit exceeded",
+                                    lambda_str, w_str, uf_str
+                                );
                                 total_errors += 1;
                             }
                         }
@@ -378,15 +408,19 @@ pub fn run(args: PopulateArgs) {
                     format!("({})/({})", lambda_str, mu_str)
                 };
                 let n_weights = weights.len();
-                eprintln!("  {}: {} weights, {} computed, {} skipped",
-                    shape, n_weights, total_computed, total_skipped);
+                eprintln!(
+                    "  {}: {} weights, {} computed, {} skipped",
+                    shape, n_weights, total_computed, total_skipped
+                );
             }
         }
     }
 
     eprintln!();
-    eprintln!("Done: {} computed, {} skipped (already in DB), {} errors.",
-        total_computed, total_skipped, total_errors);
+    eprintln!(
+        "Done: {} computed, {} skipped (already in DB), {} errors.",
+        total_computed, total_skipped, total_errors
+    );
 }
 
 // ── single-row computation ───────────────────────────────────────────────────
@@ -430,7 +464,16 @@ fn compute_one(
 
     // Ehrhart polynomial.
     let use_reciprocity = !has_flags;
-    let poly = compute_ehrhart(lam, mu, w, upper_flags, None, false, max_states, use_reciprocity);
+    let poly = compute_ehrhart(
+        lam,
+        mu,
+        w,
+        upper_flags,
+        None,
+        false,
+        max_states,
+        use_reciprocity,
+    );
     let hstar = compute_hstar(&poly);
 
     ComputedRow {

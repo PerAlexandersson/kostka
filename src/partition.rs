@@ -12,6 +12,14 @@ impl Partition {
         Partition(parts)
     }
 
+    /// Construct a partition from parts already known to be weakly decreasing.
+    pub fn from_sorted(mut parts: Vec<u32>) -> Self {
+        while parts.last() == Some(&0) {
+            parts.pop();
+        }
+        Partition(parts)
+    }
+
     pub fn empty() -> Self {
         Partition(vec![])
     }
@@ -92,7 +100,11 @@ impl Partition {
         if self.0.is_empty() {
             return "∅".to_string();
         }
-        self.0.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")
+        self.0
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
     }
 }
 
@@ -104,9 +116,7 @@ impl std::fmt::Display for Partition {
 
 /// Parse a comma-separated list of non-negative integers into a Partition.
 pub fn parse_partition(s: &str) -> Result<Partition, String> {
-    let parts: Result<Vec<u32>, _> = s.split(',')
-        .map(|x| x.trim().parse::<u32>())
-        .collect();
+    let parts: Result<Vec<u32>, _> = s.split(',').map(|x| x.trim().parse::<u32>()).collect();
     parts
         .map(Partition::new)
         .map_err(|e| format!("Invalid partition: {}", e))
@@ -115,6 +125,10 @@ pub fn parse_partition(s: &str) -> Result<Partition, String> {
 /// Parse a comma-separated list into a weight vector (composition); zeros allowed, order kept.
 pub fn parse_weight(s: &str) -> Result<Vec<u32>, String> {
     s.split(',')
-        .map(|x| x.trim().parse::<u32>().map_err(|e| format!("Invalid weight: {}", e)))
+        .map(|x| {
+            x.trim()
+                .parse::<u32>()
+                .map_err(|e| format!("Invalid weight: {}", e))
+        })
         .collect()
 }
