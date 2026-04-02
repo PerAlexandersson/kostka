@@ -1,24 +1,17 @@
 //! CLI for computing Kostka coefficients, Ehrhart polynomials, and h*-vectors
 //! of Gelfand-Tsetlin polytopes.  See `kostka --help` for usage.
 
-mod ehrhart;
-mod gt_dim;
-mod kostka_dp;
-mod lr;
-mod partition;
-mod populate;
-mod syt;
-mod table;
-
 use clap::{Parser, Subcommand};
-use ehrhart::{
+use kostka::ehrhart::{
     compute_ehrhart, compute_ehrhart_legacy, compute_hstar, is_palindromic, is_unimodal,
     verify_reciprocity,
 };
-use gt_dim::gt_polytope_dim_full;
-use kostka_dp::{flagged_skew_kostka, kostka, skew_kostka, strict_kostka, strict_skew_kostka};
-use partition::{parse_partition, parse_weight, Partition};
-use syt::{count_syt, hook_lengths};
+use kostka::gt_dim::gt_polytope_dim_full;
+use kostka::kostka_dp::{
+    flagged_skew_kostka, kostka, skew_kostka, strict_kostka, strict_skew_kostka,
+};
+use kostka::partition::{parse_partition, parse_weight, Partition};
+use kostka::syt::{count_syt, hook_lengths};
 
 // ── top-level CLI ───────────────────────────────────────────────────────────────
 
@@ -405,10 +398,10 @@ EXAMPLES:
 
   CSV output of all Ehrhart data for a shape:
     kostka table --lambda 3,2,1 --all-weights --ehrhart --format csv")]
-    Table(table::TableArgs),
+    Table(kostka::table::TableArgs),
 
     /// Batch-compute Ehrhart data and store in MariaDB (crash-resumable)
-    Populate(populate::PopulateArgs),
+    Populate(kostka::populate::PopulateArgs),
 
     /// Littlewood-Richardson coefficient c^λ_{μ,ν}
     ///
@@ -708,10 +701,10 @@ fn main() {
             }
         }
         Command::Table(args) => {
-            table::run(args);
+            kostka::table::run(args);
         }
         Command::Populate(args) => {
-            populate::run(args);
+            kostka::populate::run(args);
         }
         Command::Lr {
             lambda,
@@ -723,7 +716,7 @@ fn main() {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let nu_part = parse_part(&nu);
-            lr::run(&lam, &inner, &nu_part, &format, max_states);
+            kostka::lr::run(&lam, &inner, &nu_part, &format, max_states);
         }
     }
 }

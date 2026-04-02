@@ -5,6 +5,10 @@ edition = "2021"
 description = "Kostka coefficients, Ehrhart polynomials of Gelfand-Tsetlin polytopes, and h*-vectors"
 license = "MIT"
 
+[lib]
+name = "kostka"
+path = "src/lib.rs"
+
 [[bin]]
 name = "kostka"
 path = "src/main.rs"
