@@ -1,4 +1,4 @@
-use crate::partition::Partition;
+use combinatoric_core::Partition;
 /// Standard Young tableaux count via the hook-length formula.
 ///   f^lambda = n! / prod of all hook lengths
 use num_bigint::BigUint;
@@ -7,7 +7,7 @@ use num_traits::One;
 /// Compute hook lengths for all cells of lambda.
 /// hook(i, j) = lambda[i] - j + lambda'[j] - i - 1  (0-indexed i, j).
 pub fn hook_lengths(lambda: &Partition) -> Vec<Vec<u32>> {
-    let conj = lambda.conjugate();
+    let conj = lambda.conjugate_partition();
     lambda
         .parts()
         .iter()

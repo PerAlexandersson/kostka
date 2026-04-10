@@ -2,15 +2,9 @@ use clap::Parser;
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-#[path = "../gt_dim.rs"]
-mod gt_dim;
-#[path = "../kostka_dp.rs"]
-mod kostka_dp;
-#[path = "../partition.rs"]
-mod partition;
-
-use kostka_dp::skew_kostka_stats;
-use partition::{parse_partition, parse_weight, Partition};
+use combinatoric_core::Partition;
+use kostka::kostka_dp::skew_kostka_stats;
+use kostka::partition::{parse_partition, parse_weight};
 
 #[derive(Parser, Debug)]
 #[command(about = "Explore how the order of weight entries affects Kostka DP performance")]

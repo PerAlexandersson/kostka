@@ -1,5 +1,6 @@
+use combinatoric_core::Partition;
+
 use crate::kostka_dp::{horizontal_strip_extensions, kostka, skew_kostka};
-use crate::partition::Partition;
 use num_bigint::{BigInt, BigUint, ToBigInt};
 use num_traits::{One, Zero};
 /// Littlewood-Richardson coefficients c^λ_{μ,ν} via two methods:
@@ -74,7 +75,7 @@ fn yamanouchi_enumerate(
                 cs += increments[r];
             }
             new_d[n] = cs;
-            results.push((Partition::new(parts), new_d));
+            results.push((Partition::from_sorted(parts), new_d));
         }
         return;
     }
@@ -125,7 +126,7 @@ pub fn lr_dp(
     let w: Vec<u32> = nu.parts().to_vec();
     let w_size: u32 = w.iter().sum();
 
-    if skew_size != w_size || !mu.contained_in(lambda) {
+    if skew_size != w_size || !mu.partition_less_equal(lambda) {
         return BigUint::zero();
     }
     if w.is_empty() {
@@ -261,7 +262,7 @@ pub fn lr_kostka_inverse(
             if c[j].is_zero() {
                 continue;
             }
-            let nu_pp = Partition::new(parts[j].clone());
+            let nu_pp = Partition::from_sorted(parts[j].clone());
             let k = kostka(&nu_pp, &parts[i], max_states);
             if !k.is_zero() {
                 val -= &c[j] * k.to_bigint().unwrap();

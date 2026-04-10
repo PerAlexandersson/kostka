@@ -2,7 +2,7 @@ use crate::gt_dim::gt_polytope_dim;
 use crate::kostka_dp::{
     skew_kostka, skew_kostka_legacy, strict_skew_kostka, strict_skew_kostka_legacy,
 };
-use crate::partition::Partition;
+use combinatoric_core::Partition;
 /// Ehrhart polynomial computation for GT(lambda/mu, w).
 ///
 /// By Rassart (2004), the function n ↦ K(n*lambda / n*mu, n*w) is a polynomial in n.
@@ -363,7 +363,7 @@ fn compute_ehrhart_impl(
 }
 
 fn scale_partition(p: &Partition, n: u64) -> Partition {
-    Partition::new(p.parts().iter().map(|&x| x * n as u32).collect())
+    Partition::from_sorted(p.parts().iter().map(|&x| x * n as u32).collect())
 }
 
 /// Interpolate a polynomial from d+1 arbitrary (x, y) sample points.

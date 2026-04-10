@@ -1,4 +1,4 @@
-use crate::partition::Partition;
+use combinatoric_core::Partition;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -182,7 +182,7 @@ pub fn skew_kostka_legacy(
     if skew_size != w_size {
         return BigUint::zero();
     }
-    if !mu.contained_in(lambda) {
+    if !mu.partition_less_equal(lambda) {
         return BigUint::zero();
     }
 
@@ -258,7 +258,7 @@ pub fn skew_kostka_stats(
             level_states: Vec::new(),
         };
     }
-    if !mu.contained_in(lambda) {
+    if !mu.partition_less_equal(lambda) {
         return KostkaDpStats {
             value: BigUint::zero(),
             peak_states: 0,
@@ -538,7 +538,7 @@ pub fn flagged_skew_kostka_legacy(
     if skew_size != w_size {
         return BigUint::zero();
     }
-    if !mu.contained_in(lambda) {
+    if !mu.partition_less_equal(lambda) {
         return BigUint::zero();
     }
 
@@ -599,7 +599,7 @@ pub fn flagged_skew_kostka(
     if skew_size != w_size {
         return BigUint::zero();
     }
-    if !mu.contained_in(lambda) {
+    if !mu.partition_less_equal(lambda) {
         return BigUint::zero();
     }
 
@@ -935,7 +935,7 @@ pub fn strict_skew_kostka_legacy(
     if skew_size != w_size {
         return BigUint::zero();
     }
-    if !mu.contained_in(lambda) {
+    if !mu.partition_less_equal(lambda) {
         return BigUint::zero();
     }
 
@@ -1059,7 +1059,7 @@ pub fn strict_skew_kostka(
     if skew_size != w_size {
         return BigUint::zero();
     }
-    if !mu.contained_in(lambda) {
+    if !mu.partition_less_equal(lambda) {
         return BigUint::zero();
     }
 

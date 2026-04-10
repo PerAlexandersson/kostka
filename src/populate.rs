@@ -15,10 +15,11 @@ use std::collections::HashSet;
 use std::panic;
 use std::time::Instant;
 
+use combinatoric_core::Partition;
+
 use crate::ehrhart::{compute_ehrhart, compute_hstar};
 use crate::gt_dim::gt_polytope_dim_full;
 use crate::kostka_dp::{flagged_skew_kostka, skew_kostka};
-use crate::partition::Partition;
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ fn inner_shapes(lambda: &Partition) -> Vec<Partition> {
     let mut result = vec![Partition::empty()];
     for s in 1..lambda.size() {
         for mu in Partition::all_of_size_bounded(s, lambda.num_parts(), lambda.parts()[0]) {
-            if mu.contained_in(lambda) && valid_skew(lambda, &mu) {
+            if mu.partition_less_equal(lambda) && valid_skew(lambda, &mu) {
                 result.push(mu);
             }
         }
@@ -253,7 +254,7 @@ pub fn run(args: PopulateArgs) {
                 }
 
                 // Check containment for skew.
-                if mu.num_parts() > 0 && !mu.contained_in(lam) {
+                if mu.num_parts() > 0 && !mu.partition_less_equal(lam) {
                     continue;
                 }
 

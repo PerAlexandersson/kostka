@@ -340,7 +340,7 @@ mod tests {
     // Helper: compute the empirical Ehrhart degree by sampling K(nλ, nw).
     fn empirical_degree(lambda: &[u32], mu: &[u32], w: &[u32], max_n: u64) -> usize {
         use crate::kostka_dp::skew_kostka;
-        use crate::partition::Partition;
+        use combinatoric_core::Partition;
         use num_bigint::ToBigInt;
         use num_rational::BigRational;
         use num_traits::Zero;
@@ -349,8 +349,8 @@ mod tests {
         // (Start at 1 to avoid the degenerate n=0 case.)
         let values: Vec<BigRational> = (1..=max_n)
             .map(|n| {
-                let nl = Partition::new(lambda.iter().map(|&x| x * n as u32).collect());
-                let nm = Partition::new(mu.iter().map(|&x| x * n as u32).collect());
+                let nl = Partition::from_sorted(lambda.iter().map(|&x| x * n as u32).collect());
+                let nm = Partition::from_sorted(mu.iter().map(|&x| x * n as u32).collect());
                 let nw: Vec<u32> = w.iter().map(|&x| x * n as u32).collect();
                 let k = skew_kostka(&nl, &nm, &nw, None, true);
                 BigRational::from(k.to_bigint().unwrap())
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     fn chain_model_matches_empirical_unit_weight() {
         for size in 1..=7u32 {
-            let partitions = crate::partition::Partition::all_of_size(size);
+            let partitions = combinatoric_core::Partition::all_of_size(size);
             let w: Vec<u32> = vec![1; size as usize];
             for p in &partitions {
                 let lambda = p.parts();
@@ -472,7 +472,7 @@ mod tests {
     /// (weakly decreasing, all parts > 0) with |w| = |λ/μ|.
     #[test]
     fn chain_model_skew_all_partition_weights() {
-        use crate::partition::Partition;
+        use combinatoric_core::Partition;
 
         let mut count = 0u32;
         for lam_size in 1..=7u32 {
@@ -488,7 +488,7 @@ mod tests {
                     };
                     for mu_p in &mus {
                         let mu = mu_p.parts();
-                        if !mu_p.contained_in(lam) {
+                        if !mu_p.partition_less_equal(lam) {
                             continue;
                         }
                         let s = lam_size - mu_size;

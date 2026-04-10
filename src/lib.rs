@@ -6,3 +6,5 @@ pub mod partition;
 pub mod populate;
 pub mod syt;
 pub mod table;
+
+pub use combinatoric_core::Partition;

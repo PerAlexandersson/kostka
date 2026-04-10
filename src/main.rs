@@ -10,7 +10,8 @@ use kostka::gt_dim::gt_polytope_dim_full;
 use kostka::kostka_dp::{
     flagged_skew_kostka, kostka, skew_kostka, strict_kostka, strict_skew_kostka,
 };
-use kostka::partition::{parse_partition, parse_weight, Partition};
+use combinatoric_core::Partition;
+use kostka::partition::{parse_partition, parse_weight};
 use kostka::syt::{count_syt, hook_lengths};
 
 // ── top-level CLI ───────────────────────────────────────────────────────────────
