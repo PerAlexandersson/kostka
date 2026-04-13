@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::panic;
 use std::time::Instant;
 
-use combinatoric_core::Partition;
+use crate::Partition;
 
 use crate::ehrhart::{compute_ehrhart, compute_hstar};
 use crate::gt_dim::gt_polytope_dim_full;

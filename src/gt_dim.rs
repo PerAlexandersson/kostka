@@ -336,11 +336,11 @@ pub fn gt_polytope_bounds(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Partition;
 
     // Helper: compute the empirical Ehrhart degree by sampling K(nλ, nw).
     fn empirical_degree(lambda: &[u32], mu: &[u32], w: &[u32], max_n: u64) -> usize {
         use crate::kostka_dp::skew_kostka;
-        use combinatoric_core::Partition;
         use num_bigint::ToBigInt;
         use num_rational::BigRational;
         use num_traits::Zero;
@@ -378,7 +378,7 @@ mod tests {
     #[test]
     fn chain_model_matches_empirical_unit_weight() {
         for size in 1..=7u32 {
-            let partitions = combinatoric_core::Partition::all_of_size(size);
+            let partitions = Partition::all_of_size(size);
             let w: Vec<u32> = vec![1; size as usize];
             for p in &partitions {
                 let lambda = p.parts();
@@ -472,8 +472,6 @@ mod tests {
     /// (weakly decreasing, all parts > 0) with |w| = |λ/μ|.
     #[test]
     fn chain_model_skew_all_partition_weights() {
-        use combinatoric_core::Partition;
-
         let mut count = 0u32;
         for lam_size in 1..=7u32 {
             let lambdas = Partition::all_of_size(lam_size);

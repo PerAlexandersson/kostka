@@ -1,4 +1,4 @@
-use combinatoric_core::Partition;
+use crate::Partition;
 /// Standard Young tableaux count via the hook-length formula.
 ///   f^lambda = n! / prod of all hook lengths
 use num_bigint::BigUint;

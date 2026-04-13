@@ -3,7 +3,7 @@ use clap::Args;
 use num_bigint::BigInt;
 use rayon::prelude::*;
 
-use combinatoric_core::Partition;
+use crate::Partition;
 
 use crate::ehrhart::{compute_ehrhart, compute_hstar, is_palindromic, is_unimodal};
 use crate::kostka_dp::{kostka, skew_kostka};

@@ -2,7 +2,7 @@ use crate::gt_dim::gt_polytope_dim;
 use crate::kostka_dp::{
     skew_kostka, skew_kostka_legacy, strict_skew_kostka, strict_skew_kostka_legacy,
 };
-use combinatoric_core::Partition;
+use crate::Partition;
 /// Ehrhart polynomial computation for GT(lambda/mu, w).
 ///
 /// By Rassart (2004), the function n ↦ K(n*lambda / n*mu, n*w) is a polynomial in n.

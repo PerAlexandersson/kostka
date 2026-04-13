@@ -184,6 +184,13 @@ cargo build --release
 
 Binary: `target/release/kostka`.
 
+The experimental MariaDB batch loader is disabled by default. To include the
+`populate` subcommand, build with:
+
+```
+cargo build --release --features populate
+```
+
 ---
 
 ## CLI reference
@@ -201,7 +208,7 @@ Binary: `target/release/kostka`.
 | `syt`      | Number of SYT of shape λ via hook-length formula |
 | `table`    | Batch computation; see below |
 | `lr`       | c^λ_{μ,ν} — Littlewood-Richardson coefficient |
-| `populate` | Batch-compute Ehrhart data and store in MariaDB |
+| `populate` | Batch-compute Ehrhart data and store in MariaDB (feature `populate`) |
 
 ### Common flags
 

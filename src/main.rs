@@ -10,7 +10,7 @@ use kostka::gt_dim::gt_polytope_dim_full;
 use kostka::kostka_dp::{
     flagged_skew_kostka, kostka, skew_kostka, strict_kostka, strict_skew_kostka,
 };
-use combinatoric_core::Partition;
+use kostka::Partition;
 use kostka::partition::{parse_partition, parse_weight};
 use kostka::syt::{count_syt, hook_lengths};
 
@@ -401,6 +401,7 @@ EXAMPLES:
     kostka table --lambda 3,2,1 --all-weights --ehrhart --format csv")]
     Table(kostka::table::TableArgs),
 
+    #[cfg(feature = "populate")]
     /// Batch-compute Ehrhart data and store in MariaDB (crash-resumable)
     Populate(kostka::populate::PopulateArgs),
 
@@ -704,6 +705,7 @@ fn main() {
         Command::Table(args) => {
             kostka::table::run(args);
         }
+        #[cfg(feature = "populate")]
         Command::Populate(args) => {
             kostka::populate::run(args);
         }

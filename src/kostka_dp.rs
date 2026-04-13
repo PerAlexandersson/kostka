@@ -1,4 +1,4 @@
-use combinatoric_core::Partition;
+use crate::Partition;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
 #[derive(Debug, Clone, PartialEq, Eq)]

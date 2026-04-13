@@ -1,4 +1,4 @@
-use combinatoric_core::Partition;
+use crate::Partition;
 
 use crate::kostka_dp::{horizontal_strip_extensions, kostka, skew_kostka};
 use num_bigint::{BigInt, BigUint, ToBigInt};

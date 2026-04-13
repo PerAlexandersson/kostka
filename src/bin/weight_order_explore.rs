@@ -2,7 +2,7 @@ use clap::Parser;
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use combinatoric_core::Partition;
+use kostka::Partition;
 use kostka::kostka_dp::skew_kostka_stats;
 use kostka::partition::{parse_partition, parse_weight};
 
