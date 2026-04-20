@@ -3,8 +3,8 @@
 
 use clap::{Parser, Subcommand};
 use kostka::ehrhart::{
-    compute_ehrhart, compute_ehrhart_legacy, compute_hstar, is_palindromic, is_unimodal,
-    verify_reciprocity,
+    compute_ehrhart_legacy_with_mode, compute_ehrhart_with_mode, compute_hstar,
+    is_palindromic, is_unimodal, verify_reciprocity, EhrhartInterpolation,
 };
 use kostka::gt_dim::gt_polytope_dim_full;
 use kostka::kostka_dp::{
@@ -192,6 +192,11 @@ EXAMPLES:
     /// greedily evaluates whichever side (positive or negative t) last returned the
     /// smaller count, collecting zeros on the negative side for free.
     ///
+    /// For known Gorenstein families, `--gorenstein` uses a different strategy:
+    /// it first searches on the negative side for the codegree q, then reuses
+    /// P(−q−n) = (−1)^d P(n) to infer most larger negative values from small
+    /// positive dilations.
+    ///
     /// Flags disable reciprocity and fall back to plain positive-dilation interpolation.
     #[command(after_help = "\
 EXAMPLES:
@@ -250,6 +255,11 @@ EXAMPLES:
         #[arg(long)]
         no_reciprocity: bool,
 
+        /// Assume the GT polytope is Gorenstein: detect the codegree on the negative side,
+        /// then infer larger negative values from small positive ones
+        #[arg(long, conflicts_with = "no_reciprocity")]
+        gorenstein: bool,
+
         /// Also run the legacy vector-building DP and print a timing/equality comparison
         #[arg(long)]
         compare_legacy: bool,
@@ -301,6 +311,10 @@ EXAMPLES:
     ///
     /// Computed from the Ehrhart polynomial using the formula:
     ///   h*_k = Σ_{j=0}^k (−1)^{k−j} C(d+1, k−j) P(j)
+    ///
+    /// For known Gorenstein families, `--gorenstein` uses a codegree search on
+    /// the negative side and then mirrors larger negative values from small
+    /// positive evaluations.
     #[command(after_help = "\
 EXAMPLES:
   h*-vector of GT(3,2,1 | 1,1,1,1,1,1):
@@ -346,6 +360,10 @@ EXAMPLES:
         /// Use plain positive-dilation interpolation instead of reciprocity
         #[arg(long)]
         no_reciprocity: bool,
+
+        /// Assume the GT polytope is Gorenstein and use the codegree-based interpolation
+        #[arg(long, conflicts_with = "no_reciprocity")]
+        gorenstein: bool,
     },
 
     /// Number of standard Young tableaux of shape λ (hook-length formula)
@@ -529,10 +547,11 @@ fn main() {
             lower_flags,
             show_values,
             format,
-            verbose: _,
+            verbose,
             max_states,
             verify_reciprocity: n_checks,
             no_reciprocity,
+            gorenstein,
             compare_legacy,
         } => {
             let lam = parse_part(&lambda);
@@ -540,16 +559,28 @@ fn main() {
             let w = parse_wt(&weight);
             let uf = parse_opt_weight(upper_flags.as_deref());
             let lf = parse_opt_weight(lower_flags.as_deref());
+            if gorenstein && (uf.is_some() || lf.is_some()) {
+                eprintln!(
+                    "warning: --gorenstein requires no row flags; falling back to plain positive interpolation"
+                );
+            }
+            let mode = if gorenstein {
+                EhrhartInterpolation::Gorenstein
+            } else if no_reciprocity {
+                EhrhartInterpolation::PositiveOnly
+            } else {
+                EhrhartInterpolation::AdaptiveReciprocity
+            };
             let start = std::time::Instant::now();
-            let poly = compute_ehrhart(
+            let poly = compute_ehrhart_with_mode(
                 &lam,
                 &inner,
                 &w,
                 uf.as_deref(),
                 lf.as_deref(),
-                false,
+                verbose,
                 max_states,
-                !no_reciprocity,
+                mode,
             );
             let fast_elapsed = start.elapsed();
             let shape = skew_shape_str(&lam, &inner);
@@ -586,15 +617,15 @@ fn main() {
             }
             if compare_legacy {
                 let legacy_start = std::time::Instant::now();
-                let legacy = compute_ehrhart_legacy(
+                let legacy = compute_ehrhart_legacy_with_mode(
                     &lam,
                     &inner,
                     &w,
                     uf.as_deref(),
                     lf.as_deref(),
-                    false,
+                    verbose,
                     max_states,
-                    !no_reciprocity,
+                    mode,
                 );
                 let legacy_elapsed = legacy_start.elapsed();
                 let matches = poly.degree == legacy.degree && poly.coeffs == legacy.coeffs;
@@ -639,24 +670,37 @@ fn main() {
             upper_flags,
             lower_flags,
             format,
-            verbose: _,
+            verbose,
             max_states,
             no_reciprocity,
+            gorenstein,
         } => {
             let lam = parse_part(&lambda);
             let inner = parse_inner(&mu);
             let w = parse_wt(&weight);
             let uf = parse_opt_weight(upper_flags.as_deref());
             let lf = parse_opt_weight(lower_flags.as_deref());
-            let poly = compute_ehrhart(
+            if gorenstein && (uf.is_some() || lf.is_some()) {
+                eprintln!(
+                    "warning: --gorenstein requires no row flags; falling back to plain positive interpolation"
+                );
+            }
+            let mode = if gorenstein {
+                EhrhartInterpolation::Gorenstein
+            } else if no_reciprocity {
+                EhrhartInterpolation::PositiveOnly
+            } else {
+                EhrhartInterpolation::AdaptiveReciprocity
+            };
+            let poly = compute_ehrhart_with_mode(
                 &lam,
                 &inner,
                 &w,
                 uf.as_deref(),
                 lf.as_deref(),
-                false,
+                verbose,
                 max_states,
-                !no_reciprocity,
+                mode,
             );
             let hstar = compute_hstar(&poly);
             let pal = is_palindromic(&hstar);

@@ -286,6 +286,11 @@ degree: 2
 
 ### Ehrhart polynomial
 
+By default, `ehrhart` uses adaptive Ehrhart-Macdonald reciprocity. For known
+Gorenstein families, `--gorenstein` switches to a codegree-based strategy: it
+searches the negative side for the codegree `q`, then infers larger negative
+values from small positive ones via `P(-q-n) = (-1)^d P(n)`.
+
 ```
 $ kostka ehrhart --lambda 3,2,1 --weight 2,2,2
 Ehrhart polynomial of GT( 3,2,1 | 2,2,2 ):
@@ -310,7 +315,18 @@ Ehrhart polynomial of GT( 4,3,2,1/2,1 | 2,2,2,1 ):
   values:     n=1 -> 34,  n=2 -> 462,  n=3 -> 3418,  n=4 -> 17102,  n=5 -> 49714
 ```
 
+```
+$ kostka ehrhart --lambda 3,2,1 --mu 2,1 --weight 1,1,1 --gorenstein
+Ehrhart polynomial of GT( 3,2,1/2,1 | 1,1,1 ):
+  degree:     4
+  polynomial: (1/4!) * (3n^4 + 18n^3 + 45n^2 + 54n + 24)
+  values:     n=1 -> 6,  n=2 -> 21,  n=3 -> 55,  n=4 -> 120,  n=5 -> 231
+```
+
 ### h*-vector
+
+The same `--gorenstein` flag is available for `hstar`; it changes only the
+interpolation strategy used to recover the Ehrhart polynomial.
 
 ```
 $ kostka hstar --lambda 6,4 --weight 2,2,2,2,2
