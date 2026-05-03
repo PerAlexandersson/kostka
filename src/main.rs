@@ -3,16 +3,16 @@
 
 use clap::{Parser, Subcommand};
 use kostka::ehrhart::{
-    compute_ehrhart_legacy_with_mode, compute_ehrhart_with_mode, compute_hstar,
-    is_palindromic, is_unimodal, verify_reciprocity, EhrhartInterpolation,
+    compute_ehrhart_legacy_with_mode, compute_ehrhart_with_mode, compute_hstar, is_palindromic,
+    is_unimodal, verify_reciprocity, EhrhartInterpolation,
 };
 use kostka::gt_dim::gt_polytope_dim_full;
 use kostka::kostka_dp::{
     flagged_skew_kostka, kostka, skew_kostka, strict_kostka, strict_skew_kostka,
 };
-use kostka::Partition;
 use kostka::partition::{parse_partition, parse_weight};
 use kostka::syt::{count_syt, hook_lengths};
+use kostka::Partition;
 
 // ── top-level CLI ───────────────────────────────────────────────────────────────
 
