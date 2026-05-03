@@ -122,18 +122,27 @@ $$\dim(\ker A_\mathcal{P}) = \dim(\text{minimal face of } GT(\lambda,\mu) \text{
 - $\mathbf{x}$ is in the **relative interior** iff $\dim(\ker A_\mathcal{P}) = d$ where $d = \dim GT(\lambda,\mu)$ is the polytope dimension (= Ehrhart degree).
 
 ### Algorithm for Interior Counting
-To count interior lattice points of $GT(t\lambda, t\mu)$:
-1. Enumerate all integer GT-patterns $\mathbf{x} \in GT(t\lambda, t\mu) \cap \mathbb{Z}^{\ldots}$
-2. For each, compute the tiling $\mathcal{P}$, build $A_\mathcal{P}$, compute $\dim(\ker A_\mathcal{P})$
-3. Count those with $\dim(\ker A_\mathcal{P}) = d$
+To count interior lattice points of $GT(t\lambda, t\mu)$ one can, in
+principle:
+1. Enumerate all integer GT-patterns
+   $\mathbf{x} \in GT(t\lambda, t\mu) \cap \mathbb{Z}^{\ldots}$.
+2. For each, compute the tiling $\mathcal{P}$, build $A_\mathcal{P}$,
+   and compute $\dim(\ker A_\mathcal{P})$.
+3. Count those with $\dim(\ker A_\mathcal{P}) = d$.
 
-**Current implementation status**: `strict_skew_kostka` in `src/kostka_dp.rs` uses an approximate "active rows" criterion that is **incorrect** for some cases (e.g., shape (3,1,1) with weight (1,1,1,1,1) fails at $t \ge 4$). The correct criterion requires computing $\dim(\ker A_\mathcal{P})$ per Theorem 1.5.
+The implementation uses an equivalent constraint-propagation route that is
+better suited to the horizontal-strip DP.  After `gt_polytope_bounds`
+propagates all forced bounds, an interlacing inequality is treated as part of
+the affine hull exactly when both endpoints are frozen to the same value.
+`strict_skew_kostka` then imposes strictness only on the remaining
+interlacing inequalities.  Regression tests include the formerly delicate
+shape $(3,1,1)$ with weight $(1,1,1,1,1)$ through dilations $t=1,\ldots,6$.
 
 ---
 
 ## Implementation Notes
 
-- `src/kostka_dp.rs`: DP for $K(\lambda/\mu, w)$ (`skew_kostka`), flagged variant (`flagged_skew_kostka`), and `strict_skew_kostka` (approximate — see note on Theorem 1.5 above).
+- `src/kostka_dp.rs`: DP for $K(\lambda/\mu, w)$ (`skew_kostka`), flagged variant (`flagged_skew_kostka`), and `strict_skew_kostka` for relative-interior lattice-point counts.
 - `src/gt_dim.rs`: Chain-model dimension algorithm (`gt_polytope_dim`, `gt_polytope_dim_full`). Returns `Option<usize>`: `None` = empty polytope, `Some(d)` = dimension. Handles arbitrary $k$, skew shapes, and row flags.
 - `src/ehrhart.rs`: Vandermonde interpolation to recover the Ehrhart polynomial; `verify_reciprocity` checks $(-1)^d \cdot K_{\text{strict}}(t\lambda, t\mu) = P(-t)$.
 - `src/main.rs`: CLI with subcommands `kostka`, `skew` (supports `--upper-flags`, `--lower-flags`), `degree`, `ehrhart`, `hstar`, `strict-kostka`, `syt`, `table`.
